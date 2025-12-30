@@ -131,12 +131,36 @@ def create_multi_scene_video(
             print(f"Creating multi-scene video with {num_scenes} scenes")
             print(f"Audio duration: {audio_duration:.2f}s, Scene duration: {scene_duration}s each")
             
+            # Verify we have the necessary imports before starting
+            try:
+                from PIL import Image as PILImage
+                print("  ✅ PIL/Pillow available")
+            except ImportError as pil_error:
+                print(f"  ❌ CRITICAL: PIL/Pillow not available: {pil_error}")
+                raise Exception(f"Cannot create video: PIL/Pillow is required but not installed. Error: {pil_error}")
+            
             # Create clips for each scene
             scene_clips = []
             temp_files = []  # Track temp files for cleanup
             cached_image = None  # Cache first successful image to reuse if others fail
             
+            # Verify we have image URLs or GIF paths
+            if not image_urls and not gif_paths:
+                print(f"  ❌ ERROR: No image URLs or GIF paths provided!")
+                print(f"     image_urls: {image_urls}")
+                print(f"     gif_paths: {gif_paths}")
+                raise Exception("No image URLs or GIF paths provided. Cannot create video.")
+            
+            if image_urls and len(image_urls) == 0:
+                print(f"  ❌ ERROR: Empty image_urls list provided!")
+                print(f"     This might be a Streamlit Cloud issue - image generation may have failed.")
+                print(f"     Creating placeholder video instead...")
+                # Instead of raising, create placeholder scenes
+                image_urls = None  # Will trigger placeholder creation
+            
             print(f"  Creating {num_scenes} scene clips...")
+            print(f"  Available resources: {len(image_urls) if image_urls else 0} images, {len(gif_paths) if gif_paths else 0} GIFs")
+            
             for i in range(num_scenes):
                 print(f"  Processing scene {i+1}/{num_scenes}...")
                 try:
@@ -151,14 +175,29 @@ def create_multi_scene_video(
                             scene_clip = concatenate_videoclips(looped, method="compose")
                         # Set duration for this scene
                         scene_clip = scene_clip.with_duration(scene_duration)
-                    elif image_urls and i < len(image_urls):
+                    elif image_urls and len(image_urls) > 0 and i < len(image_urls):
                         # Create GIF from image URL
-                        print(f"  Scene {i+1}/{num_scenes}: Creating GIF from image {i+1} of {len(image_urls)}: {image_urls[i][:50]}...")
-                        from app.visual_engine import generate_animated_gif_fallback
-                        
-                        scene_clip_created = False
-                        try:
-                            gif_path = generate_animated_gif_fallback(image_urls[i])
+                        image_url_to_use = image_urls[i]
+                        if not image_url_to_use or not isinstance(image_url_to_use, str) or len(image_url_to_use.strip()) == 0:
+                            print(f"  Scene {i+1}/{num_scenes}: Invalid image URL (empty or None), creating placeholder")
+                            # Create placeholder directly
+                            placeholder = PILImage.new('RGB', (1080, 1080), color='black')
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                                placeholder.save(img_file.name)
+                                img_path = img_file.name
+                                temp_files.append(img_path)
+                            
+                            scene_clip = ImageClip(img_path, duration=scene_duration)
+                            scene_clip = scene_clip.resized((1080, 1080))
+                            scene_clip_created = True
+                            print(f"    ✅ Scene {i+1}: Placeholder created (invalid URL)")
+                        else:
+                            print(f"  Scene {i+1}/{num_scenes}: Creating GIF from image {i+1} of {len(image_urls)}: {image_url_to_use[:50]}...")
+                            from app.visual_engine import generate_animated_gif_fallback
+                            
+                            scene_clip_created = False
+                            try:
+                                gif_path = generate_animated_gif_fallback(image_url_to_use)
                             
                             if gif_path and os.path.exists(gif_path):
                                 scene_clip = VideoFileClip(gif_path)
@@ -248,6 +287,37 @@ def create_multi_scene_video(
                         # Ensure scene_clip is set
                         if not scene_clip_created:
                             print(f"    ❌ FATAL: Could not create scene clip for scene {i+1}!")
+                            # Create placeholder as last resort
+                            try:
+                                placeholder = PILImage.new('RGB', (1080, 1080), color='black')
+                                with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                                    placeholder.save(img_file.name)
+                                    img_path = img_file.name
+                                    temp_files.append(img_path)
+                                
+                                scene_clip = ImageClip(img_path, duration=scene_duration)
+                                scene_clip = scene_clip.resized((1080, 1080))
+                                scene_clip_created = True
+                                print(f"    ✅ Scene {i+1}: Emergency placeholder created")
+                            except Exception as emergency_error:
+                                print(f"    ❌ Could not even create emergency placeholder: {emergency_error}")
+                                continue
+                    
+                    # If we still don't have a scene_clip, create a placeholder
+                    if 'scene_clip' not in locals() or scene_clip is None:
+                        print(f"  Scene {i+1}/{num_scenes}: No scene clip created, creating placeholder...")
+                        try:
+                            placeholder = PILImage.new('RGB', (1080, 1080), color='black')
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                                placeholder.save(img_file.name)
+                                img_path = img_file.name
+                                temp_files.append(img_path)
+                            
+                            scene_clip = ImageClip(img_path, duration=scene_duration)
+                            scene_clip = scene_clip.resized((1080, 1080))
+                            print(f"    ✅ Scene {i+1}: Final fallback placeholder created")
+                        except Exception as final_error:
+                            print(f"    ❌ FATAL: Could not create final fallback: {final_error}")
                             continue
                     
                     # Set FPS
@@ -293,7 +363,6 @@ def create_multi_scene_video(
                 print(f"     Creating placeholder scenes to ensure we have {num_scenes} total...")
                 
                 # Create placeholder scenes for missing ones
-                from PIL import Image as PILImage
                 for missing_idx in range(len(scene_clips), num_scenes):
                     try:
                         placeholder = PILImage.new('RGB', (1080, 1080), color='black')
@@ -309,14 +378,36 @@ def create_multi_scene_video(
                         print(f"     ✅ Created placeholder for missing scene {missing_idx + 1}")
                     except Exception as placeholder_error:
                         print(f"     ❌ Could not create placeholder for scene {missing_idx + 1}: {placeholder_error}")
+                        import traceback
+                        traceback.print_exc()
                 
                 if len(scene_clips) < num_scenes:
                     print(f"     ❌ CRITICAL: Still only have {len(scene_clips)} scenes after creating placeholders!")
-                else:
-                    print(f"     ✅ Now have {len(scene_clips)} scenes (some may be placeholders)")
+            
+            # Final safety check: if we still have no scenes, create at least one placeholder
+            if not scene_clips:
+                print(f"  ❌ CRITICAL: No scenes created at all! Creating emergency placeholder scenes...")
+                try:
+                    for emergency_idx in range(num_scenes):
+                        placeholder = PILImage.new('RGB', (1080, 1080), color='black')
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                            placeholder.save(img_file.name)
+                            img_path = img_file.name
+                            temp_files.append(img_path)
+                        
+                        placeholder_clip = ImageClip(img_path, duration=scene_duration)
+                        placeholder_clip = placeholder_clip.resized((1080, 1080))
+                        placeholder_clip = placeholder_clip.with_fps(30)
+                        scene_clips.append(placeholder_clip)
+                        print(f"     ✅ Created emergency placeholder scene {emergency_idx + 1}")
+                except Exception as emergency_error:
+                    print(f"     ❌ FATAL: Could not even create emergency placeholders: {emergency_error}")
+                    import traceback
+                    traceback.print_exc()
+                    raise Exception(f"No scenes could be created. All attempts failed. Last error: {emergency_error}")
             
             if not scene_clips:
-                raise Exception("No scenes could be created")
+                raise Exception("No scenes could be created after all fallback attempts")
             
             # Add professional commercial effects to each scene
             print("Adding commercial effects (zoom, text overlays)...")
