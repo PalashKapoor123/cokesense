@@ -1,0 +1,35 @@
+{
+    "events": [
+      { "name": "Super Bowl", "date": "2025-02-09", "category": "sports" },
+      { "name": "Ramadan", "date": "2025-03-01", "category": "cultural" },
+      { "name": "Diwali", "date": "2025-10-20", "category": "cultural" },
+      { "name": "New Year's Eve", "date": "2025-12-31", "category": "holiday" },
+      { "name": "Christmas", "date": "2025-12-25", "category": "holiday" },
+      { "name": "Hanukkah", "date": "2025-12-15", "category": "holiday" },
+      { "name": "Winter Solstice", "date": "2025-12-21", "category": "cultural" },
+      { "name": "NBA All-Star Weekend", "date": "2025-02-14", "category": "sports" },
+      { "name": "Oscars", "date": "2025-03-02", "category": "entertainment" },
+      { "name": "Grammy Awards", "date": "2025-02-02", "category": "entertainment" },
+      { "name": "Coachella", "date": "2025-04-11", "category": "entertainment" },
+      { "name": "Summer Olympics", "date": "2025-07-26", "category": "sports" },
+      { "name": "Valentine's Day", "date": "2025-02-14", "category": "holiday" },
+      { "name": "Easter", "date": "2025-04-20", "category": "holiday" },
+      { "name": "Memorial Day", "date": "2025-05-26", "category": "holiday" },
+      { "name": "Independence Day", "date": "2025-07-04", "category": "holiday" },
+      { "name": "Labor Day", "date": "2025-09-01", "category": "holiday" },
+      { "name": "Thanksgiving", "date": "2025-11-27", "category": "holiday" },
+      { "name": "Black Friday", "date": "2025-11-28", "category": "shopping" },
+      { "name": "Cyber Monday", "date": "2025-12-01", "category": "shopping" },
+      { "name": "Met Gala", "date": "2025-05-05", "category": "entertainment" },
+      { "name": "Cannes Film Festival", "date": "2025-05-14", "category": "entertainment" },
+      { "name": "Wimbledon", "date": "2025-06-23", "category": "sports" },
+      { "name": "US Open Tennis", "date": "2025-08-25", "category": "sports" },
+      { "name": "Mardi Gras", "date": "2025-03-04", "category": "cultural" },
+      { "name": "St. Patrick's Day", "date": "2025-03-17", "category": "cultural" },
+      { "name": "Cinco de Mayo", "date": "2025-05-05", "category": "cultural" },
+      { "name": "Pride Month", "date": "2025-06-01", "category": "cultural" },
+      { "name": "Halloween", "date": "2025-10-31", "category": "holiday" },
+      { "name": "Day of the Dead", "date": "2025-11-01", "category": "cultural" }
+    ]
+  }
+  

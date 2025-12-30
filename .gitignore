@@ -1,0 +1,55 @@
+# Environment variables
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/
+
+# Temporary files
+*.tmp
+*.log
+*.mp4
+*.mp3
+*.gif
+*.png
+*.jpg
+*.jpeg
+
+# Keep data directory but ignore database
+data/*.db
+data/*.sqlite
+
+# Assets (user can add logo if they want)
+assets/images/*.png
+assets/images/*.jpg
+assets/images/*.jpeg
+!assets/images/.gitkeep
+
+# Backup files
+*_backup_*.py
