@@ -287,40 +287,48 @@ st.markdown("""
 # -----------------------------------------------------------
 # Header Section (Figma Design)
 # -----------------------------------------------------------
-# Check if logo file exists, otherwise use text version
+# Check if local logo file exists (for local development)
 logo_path = "assets/images/coca_cola_logo.png"
 logo_exists = os.path.exists(logo_path)
 
 if logo_exists:
-    # Use image logo
-    st.markdown("""
-    <div class="main-header">
-        <div class="header-content">
-            <div class="logo-section">
-                <img src="data:image/png;base64,{}" 
-                     alt="Coca-Cola Logo" 
-                     class="coca-cola-logo-img">
-                <div>
-                    <span class="cokesense-title">CokeSense</span>
-                    <div class="subtitle">AI-Powered Marketing Campaign Generator</div>
+    # Use local image logo if available (for local dev)
+    try:
+        st.markdown("""
+        <div class="main-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="data:image/png;base64,{}" 
+                         alt="Coca-Cola Logo" 
+                         class="coca-cola-logo-img">
+                    <div>
+                        <span class="cokesense-title">CokeSense</span>
+                        <div class="subtitle">AI-Powered Marketing Campaign Generator</div>
+                    </div>
                 </div>
+                <div class="powered-by">Powered by AI</div>
             </div>
-            <div class="powered-by">Powered by AI</div>
         </div>
-    </div>
-    """.format(
-        # Read and encode the image
-        __import__('base64').b64encode(open(logo_path, 'rb').read()).decode('utf-8')
-    ), unsafe_allow_html=True)
-else:
-    # Use text version as fallback
+        """.format(
+            # Read and encode the image
+            __import__('base64').b64encode(open(logo_path, 'rb').read()).decode('utf-8')
+        ), unsafe_allow_html=True)
+    except Exception:
+        # Fall through to styled text version if local file read fails
+        logo_exists = False
+
+if not logo_exists:
+    # Use styled text version (works on Streamlit Cloud and locally)
+    # The CSS already styles this beautifully with the Coca-Cola red gradient
     st.markdown("""
     <div class="main-header">
         <div class="header-content">
             <div class="logo-section">
                 <div class="coca-cola-logo-text">Coca‑Cola</div>
-                <span class="cokesense-title">CokeSense</span>
-                <div class="subtitle">AI-Powered Marketing Campaign Generator</div>
+                <div>
+                    <span class="cokesense-title">CokeSense</span>
+                    <div class="subtitle">AI-Powered Marketing Campaign Generator</div>
+                </div>
             </div>
             <div class="powered-by">Powered by AI</div>
         </div>
