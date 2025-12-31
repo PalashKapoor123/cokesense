@@ -62,6 +62,14 @@ def create_multi_scene_video(
     
     # ColorClip should already be imported above for fallback scenes
     
+    # Helper function to handle MoviePy version compatibility (1.x uses resized, 2.x uses resize)
+    def resize_clip(clip, size):
+        """Resize a clip, handling both MoviePy 1.x and 2.x"""
+        try:
+            return clip.resized(size)  # MoviePy 1.x
+        except AttributeError:
+            return clip.resize(size)  # MoviePy 2.x
+    
     try:
         # Save audio temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as audio_file:
@@ -204,7 +212,7 @@ def create_multi_scene_video(
                                 temp_files.append(img_path)
                             
                             scene_clip = ImageClip(img_path, duration=scene_duration)
-                            scene_clip = scene_clip.resized((1080, 1080))
+                            scene_clip = resize_clip(scene_clip, (1080, 1080))
                             scene_clip_created = True
                             print(f"    ✅ Scene {i+1}: Placeholder created (invalid URL)")
                         else:
@@ -299,7 +307,7 @@ def create_multi_scene_video(
                             scene_clip = ImageClip(img_path, duration=scene_duration)
                             # Resize to Instagram-friendly size
                             target_size = (1080, 1080)
-                            scene_clip = scene_clip.resized(target_size)
+                            scene_clip = resize_clip(scene_clip, target_size)
                             scene_clip_created = True
                             print(f"    ✅ Scene {i+1}: Static image clip created")
                         
@@ -335,7 +343,7 @@ def create_multi_scene_video(
                                 temp_files.append(img_path)
                             
                             scene_clip = ImageClip(img_path, duration=scene_duration)
-                            scene_clip = scene_clip.resized((1080, 1080))
+                            scene_clip = resize_clip(scene_clip, (1080, 1080))
                             scene_clip_created_in_fallback = True
                             print(f"    ✅ Scene {i+1}: Final fallback placeholder created (PIL method)")
                         except Exception as final_error:
@@ -480,7 +488,7 @@ def create_multi_scene_video(
                             temp_files.append(img_path)
                         
                         placeholder_clip = ImageClip(img_path, duration=scene_duration)
-                        placeholder_clip = placeholder_clip.resized((1080, 1080))
+                        placeholder_clip = resize_clip(placeholder_clip, (1080, 1080))
                         placeholder_clip = placeholder_clip.with_fps(30)
                         scene_clips.append(placeholder_clip)
                         print(f"     ✅ Created placeholder for missing scene {missing_idx + 1} (PIL method)")
@@ -593,7 +601,7 @@ def create_multi_scene_video(
                                 temp_files.append(img_path)
                             
                             placeholder_clip = ImageClip(img_path, duration=scene_duration)
-                            placeholder_clip = placeholder_clip.resized((1080, 1080))
+                            placeholder_clip = resize_clip(placeholder_clip, (1080, 1080))
                             placeholder_clip = placeholder_clip.with_fps(30)
                             scene_clips.append(placeholder_clip)
                             emergency_success_count += 1
@@ -634,7 +642,9 @@ def create_multi_scene_video(
                                 print(f"     Step 2.{i+1}: Creating ImageClip from image for scene {i+1}...")
                                 scene_clip = ImageClip(img_path, duration=scene_duration)
                                 print(f"     Step 3.{i+1}: Resizing scene {i+1}...")
-                                scene_clip = scene_clip.resized((1080, 1080))
+                                # Handle both MoviePy 1.x (resized) and 2.x (resize)
+                                try:
+                                    scene_clip = resize_clip(scene_clip, (1080, 1080))
                                 print(f"     Step 4.{i+1}: Setting FPS for scene {i+1}...")
                                 scene_clip = scene_clip.with_fps(30)
                                 scene_clips.append(scene_clip)
@@ -692,7 +702,7 @@ def create_multi_scene_video(
                         new_h = int(h * zoom_factor)
                         
                         # Resize to larger size
-                        scene_clip = scene_clip.resized((new_w, new_h))
+                        scene_clip = resize_clip(scene_clip, (new_w, new_h))
                         
                         # Crop to center to create ken burns effect
                         # Calculate crop area (center of larger image)
