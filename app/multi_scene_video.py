@@ -947,15 +947,50 @@ def create_multi_scene_video(
                         
                         # Convert to numpy array and create clip
                         text_array = np.array(text_img)
-                        brand_text_clip = ImageClip(text_array).with_duration(intro_duration_actual)
+                        try:
+                            brand_text_clip = ImageClip(text_array).with_duration(intro_duration_actual)
+                            # Set FPS if needed
+                            if hasattr(brand_text_clip, 'with_fps'):
+                                brand_text_clip = brand_text_clip.with_fps(30)
+                        except Exception as imageclip_error:
+                            print(f"  ⚠️ ImageClip failed for intro text, trying alternative: {imageclip_error}")
+                            # Save text as image file and use that
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as text_file:
+                                text_img.save(text_file.name)
+                                text_path = text_file.name
+                                temp_files.append(text_path)
+                            brand_text_clip = ImageClip(text_path, duration=intro_duration_actual)
+                            if hasattr(brand_text_clip, 'with_fps'):
+                                brand_text_clip = brand_text_clip.with_fps(30)
                         
                         # Composite black screen with text
-                        intro_clip = CompositeVideoClip([black_screen, brand_text_clip])
-                        print(f"  ✅ Created black intro screen with '{brand_name}' ({intro_duration_actual}s)")
+                        try:
+                            intro_clip = CompositeVideoClip([black_screen, brand_text_clip])
+                            # Set FPS and duration
+                            if hasattr(intro_clip, 'with_fps'):
+                                intro_clip = intro_clip.with_fps(30)
+                            if hasattr(intro_clip, 'with_duration'):
+                                intro_clip = intro_clip.with_duration(intro_duration_actual)
+                            print(f"  ✅ Created black intro screen with '{brand_name}' ({intro_duration_actual}s)")
+                        except Exception as composite_error:
+                            print(f"  ⚠️ CompositeVideoClip failed, using just black screen: {composite_error}")
+                            # Fallback: just use black screen
+                            intro_clip = black_screen
+                            if hasattr(intro_clip, 'with_fps'):
+                                intro_clip = intro_clip.with_fps(30)
+                            print(f"  ⚠️ Using black screen only for intro (text overlay failed)")
                     except Exception as e:
                         print(f"  ⚠️ Could not create intro screen: {e}")
                         import traceback
                         traceback.print_exc()
+                        # Try to create at least a black screen
+                        try:
+                            intro_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=intro_duration_actual)
+                            if hasattr(intro_clip, 'with_fps'):
+                                intro_clip = intro_clip.with_fps(30)
+                            print(f"  ⚠️ Created minimal black intro screen (text failed)")
+                        except:
+                            intro_clip = None
             
             # Create black screen with slogan text at the end
             # Use the adjusted outro_duration (may have been reduced to fit all scenes)
@@ -1035,15 +1070,50 @@ def create_multi_scene_video(
                         
                         # Convert to numpy array and create clip
                         text_array = np.array(text_img)
-                        slogan_text_clip = ImageClip(text_array).with_duration(slogan_duration)
+                        try:
+                            slogan_text_clip = ImageClip(text_array).with_duration(slogan_duration)
+                            # Set FPS if needed
+                            if hasattr(slogan_text_clip, 'with_fps'):
+                                slogan_text_clip = slogan_text_clip.with_fps(30)
+                        except Exception as imageclip_error:
+                            print(f"  ⚠️ ImageClip failed for outro text, trying alternative: {imageclip_error}")
+                            # Save text as image file and use that
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as text_file:
+                                text_img.save(text_file.name)
+                                text_path = text_file.name
+                                temp_files.append(text_path)
+                            slogan_text_clip = ImageClip(text_path, duration=slogan_duration)
+                            if hasattr(slogan_text_clip, 'with_fps'):
+                                slogan_text_clip = slogan_text_clip.with_fps(30)
                         
                         # Composite black screen with text
-                        outro_clip = CompositeVideoClip([black_screen, slogan_text_clip])
-                        print(f"  ✅ Created black outro screen with slogan: '{slogan}' ({slogan_duration}s)")
+                        try:
+                            outro_clip = CompositeVideoClip([black_screen, slogan_text_clip])
+                            # Set FPS and duration
+                            if hasattr(outro_clip, 'with_fps'):
+                                outro_clip = outro_clip.with_fps(30)
+                            if hasattr(outro_clip, 'with_duration'):
+                                outro_clip = outro_clip.with_duration(slogan_duration)
+                            print(f"  ✅ Created black outro screen with slogan: '{slogan}' ({slogan_duration}s)")
+                        except Exception as composite_error:
+                            print(f"  ⚠️ CompositeVideoClip failed, using just black screen: {composite_error}")
+                            # Fallback: just use black screen
+                            outro_clip = black_screen
+                            if hasattr(outro_clip, 'with_fps'):
+                                outro_clip = outro_clip.with_fps(30)
+                            print(f"  ⚠️ Using black screen only for outro (text overlay failed)")
                     except Exception as e:
                         print(f"  ⚠️ Could not create outro screen: {e}")
                         import traceback
                         traceback.print_exc()
+                        # Try to create at least a black screen
+                        try:
+                            outro_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=slogan_duration)
+                            if hasattr(outro_clip, 'with_fps'):
+                                outro_clip = outro_clip.with_fps(30)
+                            print(f"  ⚠️ Created minimal black outro screen (text failed)")
+                        except:
+                            outro_clip = None
                 else:
                     print(f"  ⚠️ Outro duration is 0, skipping outro creation")
             
