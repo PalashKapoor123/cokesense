@@ -633,17 +633,22 @@ if st.session_state.get("campaign_generated") and st.session_state.get("last_cam
         # Audio feature
         if not st.session_state.get("slogan_audio_bytes") or st.session_state.get("last_slogan") != slogan:
             with st.spinner("🎙️ Generating audio..."):
-                audio_bytes = get_audio_bytes(slogan)
-                if audio_bytes:
-                    st.session_state["slogan_audio_bytes"] = audio_bytes
-                    st.session_state["last_slogan"] = slogan
-                else:
-                    st.error("Could not generate audio")
+                try:
+                    audio_bytes = get_audio_bytes(slogan)
+                    if audio_bytes:
+                        st.session_state["slogan_audio_bytes"] = audio_bytes
+                        st.session_state["last_slogan"] = slogan
+                    else:
+                        st.warning("⚠️ Could not generate audio. This may be due to network issues or API limitations.")
+                except Exception as e:
+                    st.warning(f"⚠️ Audio generation failed: {str(e)}. This is optional and doesn't affect the campaign brief.")
         else:
             audio_bytes = st.session_state.get("slogan_audio_bytes")
         
         if audio_bytes:
             st.audio(audio_bytes, format='audio/mp3')
+        else:
+            st.info("💡 Audio generation is optional. The campaign brief PDF is still available for download above.")
     
     # Video Generation Section
     st.divider()
