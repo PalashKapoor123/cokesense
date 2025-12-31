@@ -924,120 +924,74 @@ def create_multi_scene_video(
                             except:
                                 pass
                         
-                        # Skip TextClip - use PIL ImageClip method (same as main scenes which work)
-                        print(f"  📝 Creating intro text image using PIL (same method as main scenes)...")
+                        # Use EXACT same method as main scenes - simple and proven to work
+                        print(f"  📝 Creating intro text image (EXACT same method as main scenes)...")
                         intro_clip = None
                         try:
-                            # Create text image - make it SIMPLE and GUARANTEED to work
-                            text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))  # Black background
+                            # Create image file - EXACT same process as main scenes
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                                img_path = img_file.name
+                            
+                            # Create image with text - keep it SIMPLE
+                            text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))  # Black background, 1080x1080 like main scenes
                             draw = ImageDraw.Draw(text_img)
                             
-                            # Try to load default font
-                            font = None
+                            # Load font
                             try:
                                 font = ImageFont.load_default()
-                                print(f"  ✅ Loaded default font")
                             except:
-                                print(f"  ⚠️ Default font not available")
+                                font = None
                             
-                            # Draw the text - make it HUGE and BRIGHT
-                            text_to_draw = brand_name
-                            center_x = final_video.w // 2
-                            center_y = final_video.h // 2
-                            
+                            # Draw text in center
+                            text = brand_name
                             if font:
-                                try:
-                                    bbox = draw.textbbox((0, 0), text_to_draw, font=font)
-                                    text_width = bbox[2] - bbox[0]
-                                    text_height = bbox[3] - bbox[1]
-                                    x = center_x - text_width // 2
-                                    y = center_y - text_height // 2
-                                    
-                                    # Draw text MULTIPLE times to make it THICK and VISIBLE
-                                    # Draw red outline (thick border)
-                                    for dx in range(-15, 16, 2):
-                                        for dy in range(-15, 16, 2):
-                                            if dx != 0 or dy != 0:
-                                                draw.text((x + dx, y + dy), text_to_draw, font=font, fill=(255, 0, 0))  # Red outline
-                                    
-                                    # Draw main white text (draw 10 times to make it super thick)
-                                    for i in range(10):
-                                        draw.text((x, y), text_to_draw, font=font, fill=(255, 255, 255))
-                                    
-                                    print(f"  ✅ Drew text at ({x}, {y}), size: {text_width}x{text_height}")
-                                except Exception as draw_error:
-                                    print(f"  ⚠️ Could not draw text with font: {draw_error}")
-                                    font = None
-                            
-                            # If no font or font failed, draw a HUGE white rectangle (proves method works)
-                            if not font:
-                                print(f"  🔧 Drawing fallback white rectangle (no font available)")
-                                box_size = 400
-                                draw.rectangle(
-                                    [(center_x - box_size, center_y - 150), (center_x + box_size, center_y + 150)],
-                                    fill=(255, 255, 255),  # Bright white
-                                    outline=(255, 0, 0),  # Red outline
-                                    width=20
-                                )
-                                print(f"  ✅ Drew HUGE white rectangle with red border")
-                            
-                            # EMERGENCY: Verify and fix if center is still black
-                            try:
-                                pixel = text_img.getpixel((center_x, center_y))
-                                print(f"  🔍 Center pixel: {pixel}")
-                                if pixel == (0, 0, 0):
-                                    print(f"  ⚠️ WARNING: Center is black! Drawing emergency white box...")
-                                    draw.rectangle(
-                                        [(50, 50), (final_video.w - 50, final_video.h - 50)],
-                                        fill=(255, 255, 255),
-                                        outline=(255, 0, 0),
-                                        width=30
-                                    )
-                            except:
-                                pass
+                                bbox = draw.textbbox((0, 0), text, font=font)
+                                text_width = bbox[2] - bbox[0]
+                                text_height = bbox[3] - bbox[1]
+                                x = (1080 - text_width) // 2
+                                y = (1080 - text_height) // 2
+                                
+                                # Draw white text
+                                draw.text((x, y), text, font=font, fill=(255, 255, 255))
+                            else:
+                                # No font - draw white rectangle
+                                draw.rectangle([(340, 490), (740, 590)], fill=(255, 255, 255))
                             
                             # Save image
-                            text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
-                            text_img.save(text_path, 'PNG')
-                            temp_files.append(text_path)
+                            text_img.save(img_path, 'PNG')
+                            temp_files.append(img_path)
                             
-                            # Verify file
-                            if os.path.exists(text_path):
-                                file_size = os.path.getsize(text_path)
-                                print(f"  ✅ Saved text image: {text_path} ({file_size} bytes)")
-                            else:
-                                print(f"  ❌ File was not created!")
+                            # Create ImageClip - EXACT same as main scenes
+                            print(f"    Creating ImageClip from saved image...")
+                            intro_clip = ImageClip(img_path, duration=intro_duration_actual)
+                            print(f"    ImageClip created, duration: {intro_clip.duration}s")
                             
-                            # Create ImageClip - EXACT same method as main scenes
-                            print(f"  📹 Creating ImageClip from saved image (same as main scenes)...")
-                            intro_clip = ImageClip(text_path, duration=intro_duration_actual)
-                            print(f"  ImageClip created, duration: {intro_clip.duration}s")
+                            # Resize - EXACT same as main scenes
+                            target_size = (1080, 1080)
+                            print(f"    Resizing to {target_size}...")
+                            intro_clip = resize_clip(intro_clip, target_size)
+                            print(f"    Resize complete, duration: {intro_clip.duration}s")
                             
-                            # Resize
-                            target_size = (final_video.w, final_video.h)
-                            if hasattr(intro_clip, 'size') and intro_clip.size != target_size:
-                                intro_clip = resize_clip(intro_clip, target_size)
-                                print(f"  Resized to {target_size}")
-                            
-                            # Set FPS
+                            # Set FPS - EXACT same as main scenes
                             if hasattr(intro_clip, 'with_fps'):
                                 intro_clip = intro_clip.with_fps(30)
+                                print(f"    FPS set to 30")
                             
-                            # Set duration
+                            # Set duration - EXACT same as main scenes
                             if hasattr(intro_clip, 'with_duration'):
                                 intro_clip = intro_clip.with_duration(intro_duration_actual)
+                                print(f"    Duration set to {intro_duration_actual}s")
                             
-                            print(f"  ✅ Intro clip created successfully")
+                            print(f"    Final clip duration: {intro_clip.duration}s")
+                            print(f"    ✅ Intro clip created successfully (same method as main scenes)")
                         except Exception as e:
-                            print(f"  ❌ Failed to create intro clip: {e}")
+                            print(f"    ⚠️ Intro ImageClip failed: {e}")
                             import traceback
                             traceback.print_exc()
                             intro_clip = black_screen
                         
                         if intro_clip is None:
                             intro_clip = black_screen
-                        
-                        print(f"  ✅ Final intro clip: duration={intro_clip.duration}s")
                     except Exception as e:
                         print(f"  ⚠️ Could not create intro screen: {e}")
                         import traceback
