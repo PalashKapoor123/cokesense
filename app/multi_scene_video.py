@@ -70,6 +70,14 @@ def create_multi_scene_video(
         except AttributeError:
             return clip.resize(size)  # MoviePy 2.x
     
+    # Helper function to handle MoviePy version compatibility for audio attachment
+    def set_audio_on_clip(video_clip, audio_clip):
+        """Set audio on a video clip, handling both MoviePy versions"""
+        try:
+            return video_clip.with_audio(audio_clip)  # MoviePy 1.x
+        except AttributeError:
+            return video_clip.set_audio(audio_clip)  # MoviePy 2.x
+    
     try:
         # Save audio temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as audio_file:
@@ -1099,7 +1107,7 @@ def create_multi_scene_video(
             
             # Add audio to video
             # If audio is shorter than video, MoviePy will automatically handle silence after audio ends
-            final_video = final_video.with_audio(audio_clip_full)
+            final_video = set_audio_on_clip(final_video, audio_clip_full)
             
             print(f"  ✅ Audio added successfully!")
             print(f"  ✅ Final video duration: {final_video.duration:.4f}s")
