@@ -488,19 +488,54 @@ def create_multi_scene_video(
             if not scene_clips:
                 print(f"  ❌ CRITICAL: No scenes created at all! Creating emergency placeholder scenes...")
                 print(f"  📋 Attempting to create {num_scenes} emergency placeholder scenes...")
+                
+                # First, verify what's available
+                print(f"  🔍 Checking available tools...")
+                colorclip_available = False
+                pil_available = False
+                
+                try:
+                    # Test ColorClip
+                    test_colorclip = ColorClip(size=(10, 10), color=(0, 0, 0), duration=0.1)
+                    del test_colorclip
+                    colorclip_available = True
+                    print(f"     ✅ ColorClip is available")
+                except Exception as colorclip_test_error:
+                    print(f"     ❌ ColorClip test failed: {colorclip_test_error}")
+                
+                try:
+                    # Test PIL
+                    test_pil = PILImage.new('RGB', (10, 10), color='black')
+                    del test_pil
+                    pil_available = True
+                    print(f"     ✅ PIL is available")
+                except Exception as pil_test_error:
+                    print(f"     ❌ PIL test failed: {pil_test_error}")
+                
                 emergency_success_count = 0
                 
                 for emergency_idx in range(num_scenes):
                     scene_created = False
                     # Method 1: Try ColorClip first (simplest, no PIL needed)
-                    if not scene_created:
+                    if not scene_created and colorclip_available:
                         try:
                             print(f"     Method 1: Trying ColorClip for scene {emergency_idx + 1}...")
-                            placeholder_clip = ColorClip(
-                                size=(1080, 1080),
-                                color=(0, 0, 0),  # Black
-                                duration=scene_duration
-                            )
+                            # Try different ColorClip parameter formats
+                            try:
+                                placeholder_clip = ColorClip(
+                                    size=(1080, 1080),
+                                    color=(0, 0, 0),  # Black as RGB tuple
+                                    duration=scene_duration
+                                )
+                            except Exception as format_error:
+                                print(f"     ⚠️ RGB tuple format failed, trying color name: {format_error}")
+                                # Try with color name
+                                placeholder_clip = ColorClip(
+                                    size=(1080, 1080),
+                                    color='black',
+                                    duration=scene_duration
+                                )
+                            
                             placeholder_clip = placeholder_clip.with_fps(30)
                             scene_clips.append(placeholder_clip)
                             emergency_success_count += 1
@@ -512,7 +547,7 @@ def create_multi_scene_video(
                             traceback.print_exc()
                     
                     # Method 2: Try PIL + ImageClip
-                    if not scene_created:
+                    if not scene_created and pil_available:
                         try:
                             print(f"     Method 2: Trying PIL + ImageClip for scene {emergency_idx + 1}...")
                             placeholder = PILImage.new('RGB', (1080, 1080), color='black')
@@ -535,6 +570,8 @@ def create_multi_scene_video(
                     
                     if not scene_created:
                         print(f"     ❌ FATAL: Could not create scene {emergency_idx + 1} with any method!")
+                        print(f"        ColorClip available: {colorclip_available}")
+                        print(f"        PIL available: {pil_available}")
                 
                 print(f"  📊 Emergency creation results: {emergency_success_count}/{num_scenes} scenes created")
                 
@@ -544,7 +581,9 @@ def create_multi_scene_video(
                     error_msg += f"  - Requested scenes: {num_scenes}\n"
                     error_msg += f"  - Created scenes: {len(scene_clips)}\n"
                     error_msg += f"  - Emergency creation attempted: {num_scenes} scenes\n"
-                    error_msg += f"  - Emergency creation succeeded: {emergency_success_count} scenes"
+                    error_msg += f"  - Emergency creation succeeded: {emergency_success_count} scenes\n"
+                    error_msg += f"  - ColorClip available: {colorclip_available}\n"
+                    error_msg += f"  - PIL available: {pil_available}"
                     raise Exception(error_msg)
             
             if not scene_clips:
