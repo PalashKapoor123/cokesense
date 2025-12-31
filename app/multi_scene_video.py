@@ -917,8 +917,9 @@ def create_multi_scene_video(
                             duration=intro_duration_actual
                         )
                         
-                        # Create brand name text image
-                        text_img = Image.new('RGBA', (final_video.w, final_video.h), (0, 0, 0, 0))
+                        # Create brand name text image with black background (not transparent)
+                        # This ensures the text is visible when composited
+                        text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))  # Black background
                         draw = ImageDraw.Draw(text_img)
                         
                         # Try to use a system font
@@ -941,9 +942,9 @@ def create_multi_scene_video(
                         for adj in range(-5, 6):
                             for adj2 in range(-5, 6):
                                 if adj != 0 or adj2 != 0:
-                                    draw.text((x + adj, y + adj2), brand_name, font=font, fill=(200, 16, 46, 255))
+                                    draw.text((x + adj, y + adj2), brand_name, font=font, fill=(200, 16, 46))  # Red outline
                         # Draw main white text
-                        draw.text((x, y), brand_name, font=font, fill=(255, 255, 255, 255))
+                        draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))  # White text
                         
                         # Save text as image file first (more reliable than numpy array)
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as text_file:
@@ -976,9 +977,10 @@ def create_multi_scene_video(
                                 print(f"  ❌ Both methods failed: {numpy_error}")
                                 raise
                         
-                        # Composite black screen with text
+                        # Since text image already has black background, we can use it directly
+                        # No need to composite - the text image IS the intro screen
                         try:
-                            # Ensure both clips have the same size and duration
+                            # Ensure clip has correct size and duration
                             if hasattr(brand_text_clip, 'size') and brand_text_clip.size != (final_video.w, final_video.h):
                                 brand_text_clip = resize_clip(brand_text_clip, (final_video.w, final_video.h))
                             
@@ -987,36 +989,23 @@ def create_multi_scene_video(
                                 brand_text_clip = brand_text_clip.with_duration(intro_duration_actual)
                             
                             # Set FPS
-                            if hasattr(black_screen, 'with_fps'):
-                                black_screen = black_screen.with_fps(30)
                             if hasattr(brand_text_clip, 'with_fps'):
                                 brand_text_clip = brand_text_clip.with_fps(30)
                             
-                            print(f"  📊 Black screen size: {black_screen.size if hasattr(black_screen, 'size') else 'N/A'}")
-                            print(f"  📊 Text clip size: {brand_text_clip.size if hasattr(brand_text_clip, 'size') else 'N/A'}")
-                            print(f"  📊 Black screen duration: {black_screen.duration if hasattr(black_screen, 'duration') else 'N/A'}")
-                            print(f"  📊 Text clip duration: {brand_text_clip.duration if hasattr(brand_text_clip, 'duration') else 'N/A'}")
+                            # Use the text clip directly (it already has black background with text)
+                            intro_clip = brand_text_clip
                             
-                            # Composite: text on top of black screen
-                            intro_clip = CompositeVideoClip([black_screen, brand_text_clip])
-                            
-                            # Set FPS and duration
-                            if hasattr(intro_clip, 'with_fps'):
-                                intro_clip = intro_clip.with_fps(30)
-                            if hasattr(intro_clip, 'with_duration'):
-                                intro_clip = intro_clip.with_duration(intro_duration_actual)
-                            
-                            print(f"  ✅ Created black intro screen with '{brand_name}' ({intro_duration_actual}s)")
-                            print(f"  📊 Final intro clip size: {intro_clip.size if hasattr(intro_clip, 'size') else 'N/A'}")
-                        except Exception as composite_error:
-                            print(f"  ⚠️ CompositeVideoClip failed: {composite_error}")
+                            print(f"  ✅ Created intro screen with '{brand_name}' text ({intro_duration_actual}s)")
+                            print(f"  📊 Intro clip size: {intro_clip.size if hasattr(intro_clip, 'size') else 'N/A'}")
+                        except Exception as clip_error:
+                            print(f"  ⚠️ Failed to create intro clip: {clip_error}")
                             import traceback
                             traceback.print_exc()
                             # Fallback: just use black screen
                             intro_clip = black_screen
                             if hasattr(intro_clip, 'with_fps'):
                                 intro_clip = intro_clip.with_fps(30)
-                            print(f"  ⚠️ Using black screen only for intro (text overlay failed)")
+                            print(f"  ⚠️ Using black screen only for intro (text clip failed)")
                     except Exception as e:
                         print(f"  ⚠️ Could not create intro screen: {e}")
                         import traceback
