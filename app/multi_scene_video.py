@@ -1114,13 +1114,13 @@ def create_multi_scene_video(
                             text_width = bbox[2] - bbox[0]
                             x = (final_video.w - text_width) // 2
                             
-                            # Draw stroke (red outline)
-                            for adj in range(-4, 5):
-                                for adj2 in range(-4, 5):
+                            # Draw stroke (red outline) - make it thicker for visibility
+                            for adj in range(-5, 6):
+                                for adj2 in range(-5, 6):
                                     if adj != 0 or adj2 != 0:
-                                        draw.text((x + adj, y_offset + adj2), line, font=font, fill=(200, 16, 46))  # Red outline
-                            # Draw main white text
-                            draw.text((x, y_offset), line, font=font, fill=(255, 255, 255))  # White text
+                                        draw.text((x + adj, y_offset + adj2), line, font=font, fill=(244, 0, 9))  # Coca-Cola red outline
+                            # Draw main white text - make it bright and visible
+                            draw.text((x, y_offset), line, font=font, fill=(255, 255, 255))  # Bright white text
                             y_offset += text_height + 10
                         
                         # Try TextClip first (if available) - simpler and more reliable
