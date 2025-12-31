@@ -7,6 +7,15 @@ import tempfile
 import os
 from typing import List, Optional
 
+# Fix for Pillow 10.0.0+ compatibility (ANTIALIAS was removed)
+try:
+    from PIL import Image
+    # Try to add ANTIALIAS if it doesn't exist (for older MoviePy compatibility)
+    if not hasattr(Image, 'ANTIALIAS'):
+        Image.ANTIALIAS = Image.LANCZOS
+except ImportError:
+    pass
+
 
 def create_multi_scene_video(
     image_urls: List[str],
