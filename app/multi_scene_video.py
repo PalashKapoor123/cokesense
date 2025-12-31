@@ -1210,37 +1210,68 @@ def create_multi_scene_video(
                         
                         # Skip TextClip - use ImageClip method (same as main scenes which work)
                         # Save text as image file - use EXACT same method as main scenes
-                            text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
-                            # Ensure image is in RGB mode (not RGBA) - same as main scenes
-                            if text_img.mode != 'RGB':
-                                text_img = text_img.convert('RGB')
-                            text_img.save(text_path, 'PNG')
-                            temp_files.append(text_path)
-                            
-                            print(f"  📝 Saved outro text image to: {text_path}")
-                            print(f"  📊 Image mode: {text_img.mode}, size: {text_img.size}")
-                            
-                            # Verify file was created and has content
-                            if os.path.exists(text_path):
-                                file_size = os.path.getsize(text_path)
-                                print(f"  ✅ Text image file exists: {file_size} bytes")
-                            else:
-                                print(f"  ❌ Text image file was not created!")
-                            
-                            # Create clip from saved image file - use EXACT same method as main scenes
-                            print(f"  📹 Creating ImageClip from text image file (same method as main scenes)...")
-                            slogan_text_clip = ImageClip(text_path, duration=slogan_duration)
-                            
-                            # Resize to match video size - use same method as main scenes
-                            target_size = (final_video.w, final_video.h)
-                            if hasattr(slogan_text_clip, 'size') and slogan_text_clip.size != target_size:
-                                slogan_text_clip = resize_clip(slogan_text_clip, target_size)
-                            
-                            # Set FPS - same as main scenes
-                            if hasattr(slogan_text_clip, 'with_fps'):
-                                slogan_text_clip = slogan_text_clip.with_fps(30)
-                            
-                            print(f"  ✅ Created outro text clip from image file (same method as main scenes)")
+                        text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
+                        
+                        # Verify text was actually drawn before saving
+                        # Check if image has any non-black pixels (text should be white or red)
+                        has_text = False
+                        try:
+                            # Sample some pixels around where text should be
+                            for line_y in range(y_start, y_start + total_text_height, text_height + 10):
+                                if 0 <= line_y < text_img.height:
+                                    pixel = text_img.getpixel((final_video.w // 2, line_y))
+                                    if pixel != (0, 0, 0):  # Not black
+                                        has_text = True
+                                        print(f"  ✅ Found non-black pixel at center: {pixel}")
+                                        break
+                        except Exception as check_error:
+                            print(f"  ⚠️ Could not verify text pixels: {check_error}")
+                            # Assume text is there if we can't check
+                            has_text = True
+                        
+                        if not has_text:
+                            print(f"  ⚠️ WARNING: No text pixels found! Text may not have been drawn.")
+                        
+                        # Ensure image is in RGB mode (not RGBA) - same as main scenes
+                        if text_img.mode != 'RGB':
+                            text_img = text_img.convert('RGB')
+                        
+                        text_img.save(text_path, 'PNG')
+                        temp_files.append(text_path)
+                        
+                        print(f"  📝 Saved outro text image to: {text_path}")
+                        print(f"  📊 Image mode: {text_img.mode}, size: {text_img.size}, has_text: {has_text}")
+                        
+                        # Verify file was created and has content
+                        if os.path.exists(text_path):
+                            file_size = os.path.getsize(text_path)
+                            print(f"  ✅ Text image file exists: {file_size} bytes")
+                        else:
+                            print(f"  ❌ Text image file was not created!")
+                        
+                        # Create clip from saved image file - use EXACT same method as main scenes
+                        print(f"  📹 Creating ImageClip from text image file (same method as main scenes)...")
+                        slogan_text_clip = ImageClip(text_path, duration=slogan_duration)
+                        print(f"  ImageClip created, duration: {slogan_text_clip.duration}s")
+                        
+                        # Resize to match video size - use same method as main scenes
+                        target_size = (final_video.w, final_video.h)
+                        print(f"  Resizing to {target_size}...")
+                        if hasattr(slogan_text_clip, 'size') and slogan_text_clip.size != target_size:
+                            slogan_text_clip = resize_clip(slogan_text_clip, target_size)
+                            print(f"  Resize complete")
+                        
+                        # Set FPS - same as main scenes
+                        if hasattr(slogan_text_clip, 'with_fps'):
+                            slogan_text_clip = slogan_text_clip.with_fps(30)
+                            print(f"  FPS set to 30")
+                        
+                        # Ensure duration is correct - same as main scenes
+                        if hasattr(slogan_text_clip, 'with_duration'):
+                            slogan_text_clip = slogan_text_clip.with_duration(slogan_duration)
+                            print(f"  Duration set to {slogan_duration}s")
+                        
+                        print(f"  ✅ Created outro text clip from image file (same method as main scenes)")
                         
                         # Since text image already has black background, we can use it directly
                         # No need to composite - the text image IS the outro screen
