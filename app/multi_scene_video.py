@@ -946,9 +946,17 @@ def create_multi_scene_video(
                         # Draw main white text - make it bright and visible
                         draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))  # Bright white text
                         
-                        # Verify text was drawn by checking a pixel
-                        pixel_at_text = text_img.getpixel((x + text_width // 2, y + text_height // 2))
-                        print(f"  🔍 Text verification: Pixel at text center = {pixel_at_text} (should be white or red)")
+                        # Verify text was drawn by checking pixels
+                        try:
+                            pixel_at_text = text_img.getpixel((x + text_width // 2, y + text_height // 2))
+                            print(f"  🔍 Text verification: Pixel at text center = {pixel_at_text}")
+                            # Check if we have any non-black pixels (text should be white or red)
+                            if pixel_at_text == (0, 0, 0):
+                                print(f"  ⚠️ WARNING: Text center is black - text may not have been drawn!")
+                            else:
+                                print(f"  ✅ Text appears to be drawn (non-black pixel found)")
+                        except Exception as verify_error:
+                            print(f"  ⚠️ Could not verify text: {verify_error}")
                         
                         # Try TextClip first (if available) - simpler and more reliable
                         brand_text_clip = None
