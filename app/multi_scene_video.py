@@ -1179,10 +1179,18 @@ def create_multi_scene_video(
             print(f"   Outro clip created: {outro_clip is not None}")
             print(f"   Main video available time: {main_video_available_time:.2f}s")
             
-            # Add intro screen if created
+            # Add intro screen if created - VALIDATE it first
             if intro_clip:
-                video_segments.append(intro_clip)
-                print(f"  ✅ Added intro screen ({intro_duration_actual}s) with '{brand_name}'")
+                # Validate intro clip
+                if hasattr(intro_clip, 'duration') and intro_clip.duration > 0:
+                    if hasattr(intro_clip, 'size'):
+                        print(f"  ✅ Intro clip valid: duration={intro_clip.duration:.2f}s, size={intro_clip.size}")
+                    else:
+                        print(f"  ✅ Intro clip valid: duration={intro_clip.duration:.2f}s, size=unknown")
+                    video_segments.append(intro_clip)
+                    print(f"  ✅ Added intro screen ({intro_clip.duration:.2f}s) with '{brand_name}'")
+                else:
+                    print(f"  ❌ Intro clip has invalid duration ({intro_clip.duration if hasattr(intro_clip, 'duration') else 'unknown'}): skipping!")
             else:
                 print(f"  ⚠️ No intro screen (brand_name: {brand_name}, intro_duration: {intro_duration})")
             
@@ -1215,16 +1223,26 @@ def create_multi_scene_video(
                 print(f"  ❌ ERROR: Main video has 0 duration - skipping!")
                 raise Exception("Main video has 0 duration!")
             
-            # Add outro screen (black screen with slogan) if created
+            # Add outro screen (black screen with slogan) if created - VALIDATE it first
             if outro_clip:
-                video_segments.append(outro_clip)
-                print(f"  ✅ Added outro screen ({outro_duration}s) with slogan: '{slogan}'")
+                # Validate outro clip
+                if hasattr(outro_clip, 'duration') and outro_clip.duration > 0:
+                    if hasattr(outro_clip, 'size'):
+                        print(f"  ✅ Outro clip valid: duration={outro_clip.duration:.2f}s, size={outro_clip.size}")
+                    else:
+                        print(f"  ✅ Outro clip valid: duration={outro_clip.duration:.2f}s, size=unknown")
+                    video_segments.append(outro_clip)
+                    print(f"  ✅ Added outro screen ({outro_clip.duration:.2f}s) with slogan: '{slogan}'")
+                else:
+                    print(f"  ❌ Outro clip has invalid duration ({outro_clip.duration if hasattr(outro_clip, 'duration') else 'unknown'}): skipping!")
             else:
                 print(f"  ⚠️ No outro screen (slogan: {slogan})")
             
             print(f"\n📋 Video segments to concatenate: {len(video_segments)}")
             for i, seg in enumerate(video_segments):
-                print(f"   Segment {i+1}: duration={seg.duration:.2f}s")
+                seg_duration = seg.duration if hasattr(seg, 'duration') else 'unknown'
+                seg_size = seg.size if hasattr(seg, 'size') else 'unknown'
+                print(f"   Segment {i+1}: duration={seg_duration}s, size={seg_size}")
             
             # Concatenate intro + main video + outro (sequential)
             if len(video_segments) == 0:
