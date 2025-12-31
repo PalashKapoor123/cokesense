@@ -896,14 +896,10 @@ def create_multi_scene_video(
                     text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))
                     draw = ImageDraw.Draw(text_img)
                     
-                    # Draw white rectangle - make it MUCH bigger to fit large text
-                    # Use most of the screen (leave small margins)
-                    draw.rectangle([(50, 200), (1030, 880)], fill=(255, 255, 255), outline=(255, 0, 0), width=15)
-                    
-                    # Draw text (wrapped) - make it MUCH larger
+                    # Draw text (wrapped) - make it large but ensure it fits
                     try:
                         font = None
-                        font_size = 150  # Large font for slogan
+                        font_size = 130  # Slightly smaller to ensure it fits
                         
                         # Try to load a larger font
                         font_paths = [
@@ -928,7 +924,7 @@ def create_multi_scene_video(
                         words = slogan.split()
                         lines = []
                         current_line = []
-                        max_width = 900  # Wider for larger text
+                        max_width = 850  # Width that fits in rectangle
                         
                         for word in words:
                             word_width = draw.textbbox((0, 0), word, font=font)[2]
@@ -940,17 +936,42 @@ def create_multi_scene_video(
                         if current_line:
                             lines.append(' '.join(current_line))
                         
+                        # Calculate text dimensions
                         text_height = draw.textbbox((0, 0), "Test", font=font)[3] - draw.textbbox((0, 0), "Test", font=font)[1]
-                        y_start = (1080 - len(lines) * (text_height + 30)) // 2
+                        line_spacing = 30
+                        total_text_height = len(lines) * (text_height + line_spacing) - line_spacing
+                        
+                        # Find widest line for rectangle width
+                        max_line_width = 0
+                        for line in lines:
+                            bbox = draw.textbbox((0, 0), line, font=font)
+                            line_width = bbox[2] - bbox[0]
+                            if line_width > max_line_width:
+                                max_line_width = line_width
+                        
+                        # Calculate rectangle size based on text size (add padding)
+                        padding = 80
+                        rect_width = max_line_width + (padding * 2)
+                        rect_height = total_text_height + (padding * 2)
+                        rect_x1 = (1080 - rect_width) // 2
+                        rect_y1 = (1080 - rect_height) // 2
+                        rect_x2 = rect_x1 + rect_width
+                        rect_y2 = rect_y1 + rect_height
+                        
+                        # Draw white rectangle - sized to fit text with padding
+                        draw.rectangle([(rect_x1, rect_y1), (rect_x2, rect_y2)], fill=(255, 255, 255), outline=(255, 0, 0), width=15)
+                        
+                        # Center text in rectangle
+                        y_start = rect_y1 + padding
                         y = y_start
                         
                         for line in lines:
                             bbox = draw.textbbox((0, 0), line, font=font)
-                            x = (1080 - (bbox[2] - bbox[0])) // 2
+                            x = rect_x1 + padding
                             # Draw text multiple times to make it thick and bold
                             for i in range(30):
                                 draw.text((x, y), line, font=font, fill=(0, 0, 0))
-                            y += text_height + 30
+                            y += text_height + line_spacing
                     except Exception as e:
                         print(f"    ⚠️ Could not draw text: {e}")
                     
