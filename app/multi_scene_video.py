@@ -613,23 +613,36 @@ def create_multi_scene_video(
                 
                 # Final check: if we still have no scenes, try ONE MORE absolute last resort
                 if not scene_clips:
-                    print(f"  🆘 ABSOLUTE LAST RESORT: Trying to create a single minimal scene...")
+                    print(f"  🆘 ABSOLUTE LAST RESORT: Trying to create scenes using PIL + ImageClip only...")
+                    # Skip ColorClip entirely - it seems to not work on Streamlit Cloud
+                    # Use only PIL + ImageClip which should be more reliable
                     try:
-                        # Try the absolute simplest possible clip creation
-                        # Use a very small size and minimal duration
-                        minimal_clip = ColorClip(size=(100, 100), color=(0, 0, 0), duration=1.0)
-                        minimal_clip = minimal_clip.with_fps(1)  # Very low FPS
-                        minimal_clip = minimal_clip.resized((1080, 1080))  # Scale up
-                        minimal_clip = minimal_clip.with_duration(scene_duration)
-                        minimal_clip = minimal_clip.with_fps(30)
+                        from PIL import Image as PILImage
+                        # Create a simple black image
+                        black_img = PILImage.new('RGB', (1080, 1080), color='black')
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                            black_img.save(img_file.name)
+                            img_path = img_file.name
+                            temp_files.append(img_path)
                         
-                        # Create all requested scenes from this one minimal clip
+                        # Create all scenes from this one image
                         for i in range(num_scenes):
-                            scene_clips.append(minimal_clip)
+                            try:
+                                scene_clip = ImageClip(img_path, duration=scene_duration)
+                                scene_clip = scene_clip.resized((1080, 1080))
+                                scene_clip = scene_clip.with_fps(30)
+                                scene_clips.append(scene_clip)
+                                print(f"     ✅ Created scene {i+1}/{num_scenes} using PIL+ImageClip")
+                            except Exception as scene_error:
+                                print(f"     ❌ Failed to create scene {i+1}: {scene_error}")
+                                # Continue trying other scenes
                         
-                        print(f"  ✅ Created {num_scenes} minimal scenes as absolute last resort!")
-                        print(f"  ⚠️ WARNING: Using minimal fallback scenes - video quality may be reduced")
-                    except Exception as minimal_error:
+                        if scene_clips:
+                            print(f"  ✅ Created {len(scene_clips)}/{num_scenes} scenes using PIL+ImageClip fallback!")
+                            print(f"  ⚠️ WARNING: Using fallback scenes - some scenes may be missing")
+                        else:
+                            raise Exception("PIL+ImageClip method also failed for all scenes")
+                    except Exception as pil_fallback_error:
                         error_msg = f"No scenes could be created. All attempts failed.\n"
                         error_msg += f"  - Requested scenes: {num_scenes}\n"
                         error_msg += f"  - Created scenes: {len(scene_clips)}\n"
@@ -637,10 +650,13 @@ def create_multi_scene_video(
                         error_msg += f"  - Emergency creation succeeded: {emergency_success_count} scenes\n"
                         error_msg += f"  - ColorClip test passed: {colorclip_available}\n"
                         error_msg += f"  - PIL test passed: {pil_available}\n"
-                        error_msg += f"  - Minimal fallback also failed: {minimal_error}\n"
-                        error_msg += f"\n  This suggests a fundamental issue with MoviePy on this system.\n"
-                        error_msg += f"  MoviePy may not be properly installed or configured.\n"
-                        error_msg += f"  Please check the console output above for detailed error messages."
+                        error_msg += f"  - PIL+ImageClip fallback failed: {pil_fallback_error}\n"
+                        error_msg += f"\n  This suggests MoviePy is not working on Streamlit Cloud.\n"
+                        error_msg += f"  Possible causes:\n"
+                        error_msg += f"  1. Missing system dependencies (ffmpeg)\n"
+                        error_msg += f"  2. MoviePy version incompatibility\n"
+                        error_msg += f"  3. Environment restrictions on Streamlit Cloud\n"
+                        error_msg += f"\n  Please check the console output above for detailed error messages."
                         print(f"\n❌ FATAL ERROR DETAILS:")
                         print(error_msg)
                         import traceback
