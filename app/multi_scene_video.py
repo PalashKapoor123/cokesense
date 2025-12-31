@@ -616,32 +616,43 @@ def create_multi_scene_video(
                     print(f"  🆘 ABSOLUTE LAST RESORT: Trying to create scenes using PIL + ImageClip only...")
                     # Skip ColorClip entirely - it seems to not work on Streamlit Cloud
                     # Use only PIL + ImageClip which should be more reliable
+                    pil_imageclip_errors = []
                     try:
                         from PIL import Image as PILImage
                         # Create a simple black image
+                        print(f"     Step 1: Creating black image with PIL...")
                         black_img = PILImage.new('RGB', (1080, 1080), color='black')
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
                             black_img.save(img_file.name)
                             img_path = img_file.name
                             temp_files.append(img_path)
+                        print(f"     ✅ Black image created at: {img_path}")
                         
                         # Create all scenes from this one image
                         for i in range(num_scenes):
                             try:
+                                print(f"     Step 2.{i+1}: Creating ImageClip from image for scene {i+1}...")
                                 scene_clip = ImageClip(img_path, duration=scene_duration)
+                                print(f"     Step 3.{i+1}: Resizing scene {i+1}...")
                                 scene_clip = scene_clip.resized((1080, 1080))
+                                print(f"     Step 4.{i+1}: Setting FPS for scene {i+1}...")
                                 scene_clip = scene_clip.with_fps(30)
                                 scene_clips.append(scene_clip)
                                 print(f"     ✅ Created scene {i+1}/{num_scenes} using PIL+ImageClip")
                             except Exception as scene_error:
+                                error_detail = f"Scene {i+1} failed at step: {scene_error}"
+                                pil_imageclip_errors.append(error_detail)
                                 print(f"     ❌ Failed to create scene {i+1}: {scene_error}")
+                                import traceback
+                                traceback.print_exc()
                                 # Continue trying other scenes
                         
                         if scene_clips:
                             print(f"  ✅ Created {len(scene_clips)}/{num_scenes} scenes using PIL+ImageClip fallback!")
                             print(f"  ⚠️ WARNING: Using fallback scenes - some scenes may be missing")
                         else:
-                            raise Exception("PIL+ImageClip method also failed for all scenes")
+                            error_detail = "PIL+ImageClip method failed for all scenes. Errors:\n" + "\n".join(pil_imageclip_errors)
+                            raise Exception(error_detail)
                     except Exception as pil_fallback_error:
                         error_msg = f"No scenes could be created. All attempts failed.\n"
                         error_msg += f"  - Requested scenes: {num_scenes}\n"
