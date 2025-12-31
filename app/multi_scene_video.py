@@ -982,58 +982,89 @@ def create_multi_scene_video(
                         except Exception as verify_error:
                             print(f"  ⚠️ Could not verify text: {verify_error}")
                         
-                        # Try TextClip first (if available) - simpler and more reliable
-                        brand_text_clip = None
+                        # Skip TextClip - use ImageClip method (same as main scenes which work)
+                        # Save text as image file - use EXACT same method as main scenes
+                        text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
+                        
+                        # Verify text was actually drawn before saving
+                        # Check if image has any non-black pixels (text should be white or red)
+                        has_text = False
                         try:
-                            print(f"  📝 Trying TextClip for intro text...")
-                            # TextClip is simpler and more reliable than ImageClip
-                            brand_text_clip = TextClip(
-                                brand_name,
-                                fontsize=100,
-                                color='white',
-                                font='Arial-Bold',
-                                stroke_color='red',
-                                stroke_width=2
-                            )
+                            # Sample some pixels around where text should be
+                            sample_points = [
+                                (x + text_width // 2, y + text_height // 2),  # Center of text
+                                (x, y),  # Top-left of text
+                                (x + text_width, y + text_height),  # Bottom-right of text
+                            ]
+                            for px, py in sample_points:
+                                if 0 <= px < text_img.width and 0 <= py < text_img.height:
+                                    pixel = text_img.getpixel((px, py))
+                                    if pixel != (0, 0, 0):  # Not black
+                                        has_text = True
+                                        print(f"  ✅ Found non-black pixel at ({px}, {py}): {pixel}")
+                                        break
+                        except Exception as check_error:
+                            print(f"  ⚠️ Could not verify text pixels: {check_error}")
+                            # Assume text is there if we can't check
+                            has_text = True
+                        
+                        if not has_text:
+                            print(f"  ⚠️ WARNING: No text pixels found! Text may not have been drawn.")
+                            print(f"  🔧 Attempting to redraw text with larger size...")
+                            # Try redrawing with larger font
+                            try:
+                                if font is None:
+                                    font = ImageFont.load_default()
+                                # Redraw text
+                                draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))
+                                # Check again
+                                pixel = text_img.getpixel((x + text_width // 2, y + text_height // 2))
+                                if pixel != (0, 0, 0):
+                                    has_text = True
+                                    print(f"  ✅ Text redrawn successfully")
+                            except:
+                                pass
+                        
+                        # Ensure image is in RGB mode (not RGBA) - same as main scenes
+                        if text_img.mode != 'RGB':
+                            text_img = text_img.convert('RGB')
+                        
+                        text_img.save(text_path, 'PNG')
+                        temp_files.append(text_path)
+                        
+                        print(f"  📝 Saved intro text image to: {text_path}")
+                        print(f"  📊 Image mode: {text_img.mode}, size: {text_img.size}, has_text: {has_text}")
+                        
+                        # Verify file was created and has content
+                        if os.path.exists(text_path):
+                            file_size = os.path.getsize(text_path)
+                            print(f"  ✅ Text image file exists: {file_size} bytes")
+                        else:
+                            print(f"  ❌ Text image file was not created!")
+                        
+                        # Create clip from saved image file - use EXACT same method as main scenes
+                        print(f"  📹 Creating ImageClip from text image file (same method as main scenes)...")
+                        brand_text_clip = ImageClip(text_path, duration=intro_duration_actual)
+                        print(f"  ImageClip created, duration: {brand_text_clip.duration}s")
+                        
+                        # Resize to match video size - use same method as main scenes
+                        target_size = (final_video.w, final_video.h)
+                        print(f"  Resizing to {target_size}...")
+                        if hasattr(brand_text_clip, 'size') and brand_text_clip.size != target_size:
+                            brand_text_clip = resize_clip(brand_text_clip, target_size)
+                            print(f"  Resize complete")
+                        
+                        # Set FPS - same as main scenes
+                        if hasattr(brand_text_clip, 'with_fps'):
+                            brand_text_clip = brand_text_clip.with_fps(30)
+                            print(f"  FPS set to 30")
+                        
+                        # Ensure duration is correct - same as main scenes
+                        if hasattr(brand_text_clip, 'with_duration'):
                             brand_text_clip = brand_text_clip.with_duration(intro_duration_actual)
-                            brand_text_clip = brand_text_clip.with_position('center')
-                            if hasattr(brand_text_clip, 'with_fps'):
-                                brand_text_clip = brand_text_clip.with_fps(30)
-                            print(f"  ✅ Created intro text using TextClip")
-                        except Exception as textclip_error:
-                            print(f"  ⚠️ TextClip failed, using image file method: {textclip_error}")
-                            # Fallback: Save text as image file - use EXACT same method as main scenes
-                            text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
-                            # Ensure image is in RGB mode (not RGBA) - same as main scenes
-                            if text_img.mode != 'RGB':
-                                text_img = text_img.convert('RGB')
-                            text_img.save(text_path, 'PNG')
-                            temp_files.append(text_path)
-                            
-                            print(f"  📝 Saved intro text image to: {text_path}")
-                            print(f"  📊 Image mode: {text_img.mode}, size: {text_img.size}")
-                            
-                            # Verify file was created and has content
-                            if os.path.exists(text_path):
-                                file_size = os.path.getsize(text_path)
-                                print(f"  ✅ Text image file exists: {file_size} bytes")
-                            else:
-                                print(f"  ❌ Text image file was not created!")
-                            
-                            # Create clip from saved image file - use EXACT same method as main scenes
-                            print(f"  📹 Creating ImageClip from text image file (same method as main scenes)...")
-                            brand_text_clip = ImageClip(text_path, duration=intro_duration_actual)
-                            
-                            # Resize to match video size - use same method as main scenes
-                            target_size = (final_video.w, final_video.h)
-                            if hasattr(brand_text_clip, 'size') and brand_text_clip.size != target_size:
-                                brand_text_clip = resize_clip(brand_text_clip, target_size)
-                            
-                            # Set FPS - same as main scenes
-                            if hasattr(brand_text_clip, 'with_fps'):
-                                brand_text_clip = brand_text_clip.with_fps(30)
-                            
-                            print(f"  ✅ Created intro text clip from image file (same method as main scenes)")
+                            print(f"  Duration set to {intro_duration_actual}s")
+                        
+                        print(f"  ✅ Created intro text clip from image file (same method as main scenes)")
                         
                         # Since text image already has black background, we can use it directly
                         # No need to composite - the text image IS the intro screen
@@ -1177,45 +1208,8 @@ def create_multi_scene_video(
                             draw.text((x, y_offset), line, font=font, fill=(255, 255, 255))  # Bright white text
                             y_offset += text_height + 10
                         
-                        # Try TextClip first (if available) - simpler and more reliable
-                        slogan_text_clip = None
-                        try:
-                            print(f"  📝 Trying TextClip for outro text...")
-                            # TextClip is simpler and more reliable than ImageClip
-                            # For multi-line text, create multiple TextClips and composite them
-                            if len(lines) == 1:
-                                slogan_text_clip = TextClip(
-                                    lines[0],
-                                    fontsize=60,
-                                    color='white',
-                                    font='Arial-Bold',
-                                    stroke_color='red',
-                                    stroke_width=2
-                                )
-                            else:
-                                # Multiple lines - create clips for each and composite
-                                text_clips = []
-                                for line in lines:
-                                    line_clip = TextClip(
-                                        line,
-                                        fontsize=60,
-                                        color='white',
-                                        font='Arial-Bold',
-                                        stroke_color='red',
-                                        stroke_width=2
-                                    )
-                                    text_clips.append(line_clip)
-                                # Composite all lines (this is simplified - would need positioning)
-                                slogan_text_clip = text_clips[0]  # Use first line for now
-                            
-                            slogan_text_clip = slogan_text_clip.with_duration(slogan_duration)
-                            slogan_text_clip = slogan_text_clip.with_position('center')
-                            if hasattr(slogan_text_clip, 'with_fps'):
-                                slogan_text_clip = slogan_text_clip.with_fps(30)
-                            print(f"  ✅ Created outro text using TextClip")
-                        except Exception as textclip_error:
-                            print(f"  ⚠️ TextClip failed, using image file method: {textclip_error}")
-                            # Fallback: Save text as image file - use EXACT same method as main scenes
+                        # Skip TextClip - use ImageClip method (same as main scenes which work)
+                        # Save text as image file - use EXACT same method as main scenes
                             text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
                             # Ensure image is in RGB mode (not RGBA) - same as main scenes
                             if text_img.mode != 'RGB':
