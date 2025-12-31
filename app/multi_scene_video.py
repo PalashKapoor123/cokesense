@@ -760,6 +760,54 @@ def create_multi_scene_video(
             # Add professional commercial effects to each scene
             print("Adding commercial effects (zoom, text overlays)...")
             enhanced_scenes = []
+            
+            # Create intro clip FIRST and add it to enhanced_scenes
+            if brand_name:
+                try:
+                    from PIL import Image, ImageDraw, ImageFont
+                    import tempfile
+                    
+                    intro_duration = 2.0
+                    print(f"  📝 Creating intro clip as first scene...")
+                    
+                    # Create image file - same as main scenes
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                        img_path = img_file.name
+                    
+                    # Create simple image with text
+                    text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))
+                    draw = ImageDraw.Draw(text_img)
+                    
+                    # Draw white rectangle
+                    draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
+                    
+                    # Draw text
+                    try:
+                        font = ImageFont.load_default()
+                        bbox = draw.textbbox((0, 0), brand_name, font=font)
+                        x = (1080 - (bbox[2] - bbox[0])) // 2
+                        y = (1080 - (bbox[3] - bbox[1])) // 2
+                        for i in range(20):
+                            draw.text((x, y), brand_name, font=font, fill=(0, 0, 0))
+                    except:
+                        pass
+                    
+                    text_img.save(img_path, 'PNG')
+                    temp_files.append(img_path)
+                    
+                    # Create ImageClip - same as main scenes
+                    intro_clip = ImageClip(img_path, duration=intro_duration)
+                    intro_clip = resize_clip(intro_clip, (1080, 1080))
+                    if hasattr(intro_clip, 'with_fps'):
+                        intro_clip = intro_clip.with_fps(30)
+                    if hasattr(intro_clip, 'with_duration'):
+                        intro_clip = intro_clip.with_duration(intro_duration)
+                    
+                    enhanced_scenes.insert(0, intro_clip)
+                    print(f"  ✅ Added intro clip as first scene ({intro_duration}s)")
+                except Exception as e:
+                    print(f"  ⚠️ Could not create intro: {e}")
+            
             for i, scene_clip in enumerate(scene_clips):
                 # Add subtle zoom effect for more dynamic feel
                 # Simple approach: resize slightly larger, then crop to center
@@ -969,10 +1017,10 @@ def create_multi_scene_video(
                 
                 # Force intro creation if brand_name is provided (even if intro_duration was adjusted)
                 if brand_name:
-                if intro_duration_actual <= 0:
-                    # Restore intro duration if it was set to 0
-                    intro_duration_actual = 2.0
-                    print(f"  ⚠️ Intro duration was 0, restoring to {intro_duration_actual}s")
+                    if intro_duration_actual <= 0:
+                        # Restore intro duration if it was set to 0
+                        intro_duration_actual = 2.0
+                        print(f"  ⚠️ Intro duration was 0, restoring to {intro_duration_actual}s")
                 
                 if intro_duration_actual > 0:
                     try:
