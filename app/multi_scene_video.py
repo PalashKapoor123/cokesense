@@ -938,13 +938,17 @@ def create_multi_scene_video(
                         x = (final_video.w - text_width) // 2
                         y = (final_video.h - text_height) // 2
                         
-                        # Draw text with red stroke (outline)
-                        for adj in range(-5, 6):
-                            for adj2 in range(-5, 6):
+                        # Draw text with red stroke (outline) - make it thicker for visibility
+                        for adj in range(-6, 7):
+                            for adj2 in range(-6, 7):
                                 if adj != 0 or adj2 != 0:
-                                    draw.text((x + adj, y + adj2), brand_name, font=font, fill=(200, 16, 46))  # Red outline
-                        # Draw main white text
-                        draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))  # White text
+                                    draw.text((x + adj, y + adj2), brand_name, font=font, fill=(244, 0, 9))  # Coca-Cola red outline
+                        # Draw main white text - make it bright and visible
+                        draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))  # Bright white text
+                        
+                        # Verify text was drawn by checking a pixel
+                        pixel_at_text = text_img.getpixel((x + text_width // 2, y + text_height // 2))
+                        print(f"  🔍 Text verification: Pixel at text center = {pixel_at_text} (should be white or red)")
                         
                         # Try TextClip first (if available) - simpler and more reliable
                         brand_text_clip = None
