@@ -922,14 +922,38 @@ def create_multi_scene_video(
                         text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))  # Black background
                         draw = ImageDraw.Draw(text_img)
                         
-                        # Try to use a system font
+                        # Try to use a system font - with better fallbacks
+                        font = None
+                        font_size = 100
                         try:
-                            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 100)
+                            # Try various font paths that might work on different systems
+                            font_paths = [
+                                "/System/Library/Fonts/Helvetica.ttc",
+                                "/System/Library/Fonts/Arial.ttf",
+                                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                            ]
+                            for font_path in font_paths:
+                                try:
+                                    if os.path.exists(font_path):
+                                        font = ImageFont.truetype(font_path, font_size)
+                                        print(f"  ✅ Loaded font: {font_path}")
+                                        break
+                                except:
+                                    continue
                         except:
+                            pass
+                        
+                        # If no font loaded, use default (might be small but should work)
+                        if font is None:
                             try:
-                                font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 100)
-                            except:
                                 font = ImageFont.load_default()
+                                print(f"  ⚠️ Using default font (may be small)")
+                                font_size = 20  # Default font is usually small
+                            except:
+                                print(f"  ❌ Could not load any font!")
+                                # Create a simple text representation without font
+                                # This is a last resort
                         
                         # Get text size for centering
                         bbox = draw.textbbox((0, 0), brand_name, font=font)
