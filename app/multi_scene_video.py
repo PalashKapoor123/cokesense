@@ -629,8 +629,24 @@ def create_multi_scene_video(
                         for i in range(num_scenes):
                             try:
                                 print(f"     Creating scene {i+1}/{num_scenes} using ColorClip...")
-                                scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
-                                scene_clip = scene_clip.with_fps(30)
+                                # Try different ways to set FPS based on MoviePy version
+                                try:
+                                    # MoviePy 1.x: FPS is set in constructor or with with_fps()
+                                    scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration, fps=30)
+                                except TypeError:
+                                    # MoviePy 2.x: FPS might need to be set differently
+                                    try:
+                                        scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
+                                        # Try with_fps if available
+                                        if hasattr(scene_clip, 'with_fps'):
+                                            scene_clip = scene_clip.with_fps(30)
+                                        elif hasattr(scene_clip, 'set_fps'):
+                                            scene_clip = scene_clip.set_fps(30)
+                                        # If neither works, just use the clip as-is (FPS might be set automatically)
+                                    except Exception as fps_error:
+                                        print(f"     ⚠️ FPS setting failed, using clip without explicit FPS: {fps_error}")
+                                        scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
+                                
                                 scene_clips.append(scene_clip)
                                 print(f"     ✅ Created scene {i+1}/{num_scenes} using ColorClip")
                             except Exception as scene_error:
