@@ -765,7 +765,6 @@ def create_multi_scene_video(
             if brand_name:
                 try:
                     from PIL import Image, ImageDraw, ImageFont
-                    import tempfile
                     
                     intro_duration = 2.0
                     print(f"  📝 Creating intro clip as first scene...")
@@ -847,7 +846,6 @@ def create_multi_scene_video(
             if slogan:
                 try:
                     from PIL import Image, ImageDraw, ImageFont
-                    import tempfile
                     
                     outro_duration = 2.0
                     print(f"  📝 Creating outro clip as last scene...")
