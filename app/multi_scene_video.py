@@ -307,6 +307,7 @@ def create_multi_scene_video(
                                 continue
                     
                     # If we still don't have a scene_clip, create a placeholder
+                    scene_clip_created_in_fallback = False
                     if 'scene_clip' not in locals() or scene_clip is None:
                         print(f"  Scene {i+1}/{num_scenes}: No scene clip created, creating placeholder...")
                         try:
@@ -319,6 +320,7 @@ def create_multi_scene_video(
                             
                             scene_clip = ImageClip(img_path, duration=scene_duration)
                             scene_clip = scene_clip.resized((1080, 1080))
+                            scene_clip_created_in_fallback = True
                             print(f"    ✅ Scene {i+1}: Final fallback placeholder created (PIL method)")
                         except Exception as final_error:
                             print(f"    ⚠️ PIL method failed, trying ColorClip fallback: {final_error}")
@@ -335,13 +337,50 @@ def create_multi_scene_video(
                                     duration=scene_duration
                                 )
                                 scene_clip = scene_clip.with_fps(30)
+                                scene_clip_created_in_fallback = True
                                 print(f"    ✅ Scene {i+1}: Final fallback placeholder created (ColorClip method)")
                             except Exception as colorclip_error:
                                 print(f"    ❌ FATAL: Both methods failed: {colorclip_error}")
-                                continue
+                                import traceback
+                                traceback.print_exc()
+                                # Don't continue - try one more absolute basic method
+                                try:
+                                    # Last resort: Try creating a minimal ColorClip without resizing
+                                    try:
+                                        from moviepy import ColorClip
+                                    except ImportError:
+                                        from moviepy.editor import ColorClip
+                                    scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
+                                    scene_clip_created_in_fallback = True
+                                    print(f"    ✅ Scene {i+1}: Created minimal ColorClip as absolute last resort")
+                                except Exception as last_resort_error:
+                                    print(f"    ❌ ABSOLUTE FAILURE: Could not create any clip: {last_resort_error}")
+                                    # Still continue - we'll handle empty scene_clips later
+                                    continue
                     
-                    # Set FPS
-                    scene_clip = scene_clip.with_fps(30)
+                    # CRITICAL: Ensure we ALWAYS have a scene_clip before appending
+                    if 'scene_clip' not in locals() or scene_clip is None:
+                        # Absolute last resort: Create a basic ColorClip
+                        print(f"  Scene {i+1}: Creating absolute last resort ColorClip...")
+                        try:
+                            try:
+                                from moviepy import ColorClip
+                            except ImportError:
+                                from moviepy.editor import ColorClip
+                            scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
+                            scene_clip = scene_clip.with_fps(30)
+                            print(f"    ✅ Scene {i+1}: Created absolute last resort ColorClip")
+                        except Exception as absolute_error:
+                            print(f"    ❌ CRITICAL: Even ColorClip failed: {absolute_error}")
+                            # This should never happen, but if it does, we'll handle it in the final check
+                            continue
+                    
+                    # Set FPS if not already set
+                    if hasattr(scene_clip, 'with_fps'):
+                        try:
+                            scene_clip = scene_clip.with_fps(30)
+                        except:
+                            pass  # FPS might already be set
                     
                     # Note: Fade transitions not available in MoviePy 2.x
                     # Scenes will transition directly (still looks good!)
@@ -356,8 +395,9 @@ def create_multi_scene_video(
                     
                     # CRITICAL: Don't skip the scene - create a fallback placeholder
                     print(f"  🔧 Creating fallback placeholder for scene {i+1} to ensure all scenes are included...")
+                    scene_clip_created = False
                     try:
-                        # Create a black placeholder image
+                        # Try PIL + ImageClip method first
                         from PIL import Image as PILImage
                         placeholder = PILImage.new('RGB', (1080, 1080), color='black')
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
@@ -369,12 +409,32 @@ def create_multi_scene_video(
                         scene_clip = scene_clip.resized((1080, 1080))
                         scene_clip = scene_clip.with_fps(30)
                         scene_clips.append(scene_clip)
-                        print(f"  ✅ Scene {i+1}/{num_scenes} fallback placeholder created and added")
+                        scene_clip_created = True
+                        print(f"  ✅ Scene {i+1}/{num_scenes} fallback placeholder created and added (PIL method)")
                     except Exception as fallback_error:
-                        print(f"  ❌ FATAL: Could not even create fallback for scene {i+1}: {fallback_error}")
-                        print(f"  ⚠️ Scene {i+1} will be missing from the video!")
-                        # Only skip if we absolutely cannot create anything
-                        continue
+                        print(f"  ⚠️ PIL method failed in exception handler, trying ColorClip: {fallback_error}")
+                        try:
+                            # Fallback: Use ColorClip directly
+                            try:
+                                from moviepy import ColorClip
+                            except ImportError:
+                                from moviepy.editor import ColorClip
+                            
+                            scene_clip = ColorClip(
+                                size=(1080, 1080),
+                                color=(0, 0, 0),  # Black
+                                duration=scene_duration
+                            )
+                            scene_clip = scene_clip.with_fps(30)
+                            scene_clips.append(scene_clip)
+                            scene_clip_created = True
+                            print(f"  ✅ Scene {i+1}/{num_scenes} fallback placeholder created and added (ColorClip method)")
+                        except Exception as colorclip_error:
+                            print(f"  ❌ FATAL: Both methods failed in exception handler: {colorclip_error}")
+                            import traceback
+                            traceback.print_exc()
+                            # Don't continue - this scene will be missing, but we'll handle it in final check
+                            print(f"  ⚠️ Scene {i+1} will be missing from the video!")
             
             print(f"  ✅ Successfully created {len(scene_clips)} scene clips (expected {num_scenes})")
             if len(scene_clips) < num_scenes:
