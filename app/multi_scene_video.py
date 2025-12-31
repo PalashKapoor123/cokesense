@@ -978,15 +978,40 @@ def create_multi_scene_video(
                         
                         # Composite black screen with text
                         try:
+                            # Ensure both clips have the same size and duration
+                            if hasattr(brand_text_clip, 'size') and brand_text_clip.size != (final_video.w, final_video.h):
+                                brand_text_clip = resize_clip(brand_text_clip, (final_video.w, final_video.h))
+                            
+                            # Set duration explicitly
+                            if hasattr(brand_text_clip, 'with_duration'):
+                                brand_text_clip = brand_text_clip.with_duration(intro_duration_actual)
+                            
+                            # Set FPS
+                            if hasattr(black_screen, 'with_fps'):
+                                black_screen = black_screen.with_fps(30)
+                            if hasattr(brand_text_clip, 'with_fps'):
+                                brand_text_clip = brand_text_clip.with_fps(30)
+                            
+                            print(f"  📊 Black screen size: {black_screen.size if hasattr(black_screen, 'size') else 'N/A'}")
+                            print(f"  📊 Text clip size: {brand_text_clip.size if hasattr(brand_text_clip, 'size') else 'N/A'}")
+                            print(f"  📊 Black screen duration: {black_screen.duration if hasattr(black_screen, 'duration') else 'N/A'}")
+                            print(f"  📊 Text clip duration: {brand_text_clip.duration if hasattr(brand_text_clip, 'duration') else 'N/A'}")
+                            
+                            # Composite: text on top of black screen
                             intro_clip = CompositeVideoClip([black_screen, brand_text_clip])
+                            
                             # Set FPS and duration
                             if hasattr(intro_clip, 'with_fps'):
                                 intro_clip = intro_clip.with_fps(30)
                             if hasattr(intro_clip, 'with_duration'):
                                 intro_clip = intro_clip.with_duration(intro_duration_actual)
+                            
                             print(f"  ✅ Created black intro screen with '{brand_name}' ({intro_duration_actual}s)")
+                            print(f"  📊 Final intro clip size: {intro_clip.size if hasattr(intro_clip, 'size') else 'N/A'}")
                         except Exception as composite_error:
-                            print(f"  ⚠️ CompositeVideoClip failed, using just black screen: {composite_error}")
+                            print(f"  ⚠️ CompositeVideoClip failed: {composite_error}")
+                            import traceback
+                            traceback.print_exc()
                             # Fallback: just use black screen
                             intro_clip = black_screen
                             if hasattr(intro_clip, 'with_fps'):
@@ -1114,15 +1139,40 @@ def create_multi_scene_video(
                         
                         # Composite black screen with text
                         try:
+                            # Ensure both clips have the same size and duration
+                            if hasattr(slogan_text_clip, 'size') and slogan_text_clip.size != (final_video.w, final_video.h):
+                                slogan_text_clip = resize_clip(slogan_text_clip, (final_video.w, final_video.h))
+                            
+                            # Set duration explicitly
+                            if hasattr(slogan_text_clip, 'with_duration'):
+                                slogan_text_clip = slogan_text_clip.with_duration(slogan_duration)
+                            
+                            # Set FPS
+                            if hasattr(black_screen, 'with_fps'):
+                                black_screen = black_screen.with_fps(30)
+                            if hasattr(slogan_text_clip, 'with_fps'):
+                                slogan_text_clip = slogan_text_clip.with_fps(30)
+                            
+                            print(f"  📊 Black screen size: {black_screen.size if hasattr(black_screen, 'size') else 'N/A'}")
+                            print(f"  📊 Text clip size: {slogan_text_clip.size if hasattr(slogan_text_clip, 'size') else 'N/A'}")
+                            print(f"  📊 Black screen duration: {black_screen.duration if hasattr(black_screen, 'duration') else 'N/A'}")
+                            print(f"  📊 Text clip duration: {slogan_text_clip.duration if hasattr(slogan_text_clip, 'duration') else 'N/A'}")
+                            
+                            # Composite: text on top of black screen
                             outro_clip = CompositeVideoClip([black_screen, slogan_text_clip])
+                            
                             # Set FPS and duration
                             if hasattr(outro_clip, 'with_fps'):
                                 outro_clip = outro_clip.with_fps(30)
                             if hasattr(outro_clip, 'with_duration'):
                                 outro_clip = outro_clip.with_duration(slogan_duration)
+                            
                             print(f"  ✅ Created black outro screen with slogan: '{slogan}' ({slogan_duration}s)")
+                            print(f"  📊 Final outro clip size: {outro_clip.size if hasattr(outro_clip, 'size') else 'N/A'}")
                         except Exception as composite_error:
-                            print(f"  ⚠️ CompositeVideoClip failed, using just black screen: {composite_error}")
+                            print(f"  ⚠️ CompositeVideoClip failed: {composite_error}")
+                            import traceback
+                            traceback.print_exc()
                             # Fallback: just use black screen
                             outro_clip = black_screen
                             if hasattr(outro_clip, 'with_fps'):
