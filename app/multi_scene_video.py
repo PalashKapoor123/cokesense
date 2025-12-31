@@ -643,8 +643,7 @@ def create_multi_scene_video(
                                 scene_clip = ImageClip(img_path, duration=scene_duration)
                                 print(f"     Step 3.{i+1}: Resizing scene {i+1}...")
                                 # Handle both MoviePy 1.x (resized) and 2.x (resize)
-                                try:
-                                    scene_clip = resize_clip(scene_clip, (1080, 1080))
+                                scene_clip = resize_clip(scene_clip, (1080, 1080))
                                 print(f"     Step 4.{i+1}: Setting FPS for scene {i+1}...")
                                 scene_clip = scene_clip.with_fps(30)
                                 scene_clips.append(scene_clip)
