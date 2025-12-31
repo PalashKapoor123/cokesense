@@ -1157,42 +1157,38 @@ def create_multi_scene_video(
                             print(f"  ✅ Created outro text using TextClip")
                         except Exception as textclip_error:
                             print(f"  ⚠️ TextClip failed, using image file method: {textclip_error}")
-                            # Fallback: Save text as image file
-                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as text_file:
-                                text_img.save(text_file.name)
-                                text_path = text_file.name
-                                temp_files.append(text_path)
+                            # Fallback: Save text as image file - use EXACT same method as main scenes
+                            text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
+                            # Ensure image is in RGB mode (not RGBA) - same as main scenes
+                            if text_img.mode != 'RGB':
+                                text_img = text_img.convert('RGB')
+                            text_img.save(text_path, 'PNG')
+                            temp_files.append(text_path)
                             
                             print(f"  📝 Saved outro text image to: {text_path}")
+                            print(f"  📊 Image mode: {text_img.mode}, size: {text_img.size}")
                             
-                            # Verify file exists and has content
-                            if os.path.exists(text_path) and os.path.getsize(text_path) > 0:
-                                print(f"  ✅ Text image file verified: {os.path.getsize(text_path)} bytes")
+                            # Verify file was created and has content
+                            if os.path.exists(text_path):
+                                file_size = os.path.getsize(text_path)
+                                print(f"  ✅ Text image file exists: {file_size} bytes")
                             else:
-                                print(f"  ❌ Text image file is missing or empty!")
+                                print(f"  ❌ Text image file was not created!")
                             
-                            # Try to create clip from saved image file
-                            try:
-                                slogan_text_clip = ImageClip(text_path, duration=slogan_duration)
-                                # Resize if needed
-                                if hasattr(slogan_text_clip, 'size') and slogan_text_clip.size != (final_video.w, final_video.h):
-                                    slogan_text_clip = resize_clip(slogan_text_clip, (final_video.w, final_video.h))
-                                # Set FPS if needed
-                                if hasattr(slogan_text_clip, 'with_fps'):
-                                    slogan_text_clip = slogan_text_clip.with_fps(30)
-                                print(f"  ✅ Created outro text clip from image file")
-                            except Exception as imageclip_error:
-                                print(f"  ⚠️ ImageClip from file failed, trying numpy array: {imageclip_error}")
-                                # Fallback: try numpy array
-                                try:
-                                    text_array = np.array(text_img)
-                                    slogan_text_clip = ImageClip(text_array).with_duration(slogan_duration)
-                                    if hasattr(slogan_text_clip, 'with_fps'):
-                                        slogan_text_clip = slogan_text_clip.with_fps(30)
-                                    print(f"  ✅ Created outro text clip from numpy array")
-                                except Exception as numpy_error:
-                                    print(f"  ❌ All methods failed: {numpy_error}")
-                                    raise
+                            # Create clip from saved image file - use EXACT same method as main scenes
+                            print(f"  📹 Creating ImageClip from text image file (same method as main scenes)...")
+                            slogan_text_clip = ImageClip(text_path, duration=slogan_duration)
+                            
+                            # Resize to match video size - use same method as main scenes
+                            target_size = (final_video.w, final_video.h)
+                            if hasattr(slogan_text_clip, 'size') and slogan_text_clip.size != target_size:
+                                slogan_text_clip = resize_clip(slogan_text_clip, target_size)
+                            
+                            # Set FPS - same as main scenes
+                            if hasattr(slogan_text_clip, 'with_fps'):
+                                slogan_text_clip = slogan_text_clip.with_fps(30)
+                            
+                            print(f"  ✅ Created outro text clip from image file (same method as main scenes)")
                         
                         # Since text image already has black background, we can use it directly
                         # No need to composite - the text image IS the outro screen
