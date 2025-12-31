@@ -331,36 +331,55 @@ def create_multi_scene_video(
                                     temp_files.append(img_path)
                             
                             try:
+                                print(f"    Creating ImageClip from downloaded image...")
                                 scene_clip = ImageClip(img_path, duration=scene_duration)
+                                print(f"    ImageClip created, duration: {scene_clip.duration}s")
                                 # Resize to Instagram-friendly size
                                 target_size = (1080, 1080)
+                                print(f"    Resizing to {target_size}...")
                                 scene_clip = resize_clip(scene_clip, target_size)
+                                print(f"    Resize complete, duration: {scene_clip.duration}s")
                                 # Set FPS
                                 if hasattr(scene_clip, 'with_fps'):
                                     scene_clip = scene_clip.with_fps(30)
+                                    print(f"    FPS set to 30")
+                                # Ensure duration is correct
+                                if hasattr(scene_clip, 'with_duration'):
+                                    scene_clip = scene_clip.with_duration(scene_duration)
+                                    print(f"    Duration set to {scene_duration}s")
+                                print(f"    Final clip duration: {scene_clip.duration}s")
                                 scene_clip_created = True
-                                print(f"    ✅ Scene {i+1}: Static image clip created")
+                                print(f"    ✅ Scene {i+1}: Static image clip created successfully")
                             except Exception as imageclip_error:
-                                print(f"    ⚠️ ImageClip failed (likely Pillow version issue): {imageclip_error}")
-                                print(f"    Trying alternative: Create video clip directly from image file...")
-                                # Alternative: Use VideoFileClip with the image (treat as single frame)
+                                print(f"    ⚠️ ImageClip failed: {imageclip_error}")
+                                import traceback
+                                traceback.print_exc()
+                                print(f"    📷 Image URL that should be used: {image_urls[fallback_idx][:100]}...")
+                                # Try to use the image with a different approach
                                 try:
-                                    # Create a simple video from the image using ffmpeg-like approach
-                                    # For now, fall back to ColorClip but log the image URL
-                                    print(f"    ⚠️ ImageClip not available, using ColorClip placeholder")
-                                    print(f"    📷 Image URL that should be used: {image_urls[fallback_idx][:100]}...")
-                                    # Use basic fallback if available, otherwise create new ColorClip
+                                    # Try using VideoFileClip (might work for static images in some MoviePy versions)
+                                    print(f"    Trying VideoFileClip as alternative...")
+                                    scene_clip = VideoFileClip(img_path)
+                                    scene_clip = scene_clip.with_duration(scene_duration)
+                                    if hasattr(scene_clip, 'with_fps'):
+                                        scene_clip = scene_clip.with_fps(30)
+                                    scene_clip_created = True
+                                    print(f"    ✅ Scene {i+1}: Created using VideoFileClip")
+                                except Exception as videofile_error:
+                                    print(f"    ⚠️ VideoFileClip also failed: {videofile_error}")
+                                    # Last resort: Use ColorClip but at least log that we have the image
+                                    print(f"    ⚠️ Using ColorClip placeholder (ImageClip/VideoFileClip unavailable)")
                                     if basic_fallback_clip is not None:
-                                        scene_clip = basic_fallback_clip.with_duration(scene_duration) if hasattr(basic_fallback_clip, 'with_duration') else basic_fallback_clip
+                                        try:
+                                            scene_clip = basic_fallback_clip.with_duration(scene_duration) if hasattr(basic_fallback_clip, 'with_duration') else basic_fallback_clip
+                                        except:
+                                            scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
                                     else:
                                         scene_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
-                                        if hasattr(scene_clip, 'with_fps'):
-                                            scene_clip = scene_clip.with_fps(30)
+                                    if hasattr(scene_clip, 'with_fps'):
+                                        scene_clip = scene_clip.with_fps(30)
                                     scene_clip_created = True
-                                    print(f"    ⚠️ Scene {i+1}: Using ColorClip placeholder (ImageClip unavailable)")
-                                except Exception as alt_error:
-                                    print(f"    ❌ Alternative method also failed: {alt_error}")
-                                    scene_clip_created = False
+                                    print(f"    ⚠️ Scene {i+1}: Using ColorClip placeholder")
                         
                         # Ensure scene_clip is set
                         if not scene_clip_created:
