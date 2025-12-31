@@ -954,18 +954,21 @@ def create_multi_scene_video(
             
             final_duration = audio_duration  # Always use full audio duration
             
-            # Add commercial enhancements: black intro screen with brand name, slogan at end
-            print("🎬 Adding commercial enhancements...")
-            
-            # Create black intro screen with brand name (2 seconds)
-            # ALWAYS create intro if brand_name is provided and intro_duration > 0
+            # Intro/outro are now part of enhanced_scenes (added earlier), so skip old code
+            print("🎬 Commercial enhancements (intro/outro) already added to enhanced_scenes!")
             intro_clip = None
-            intro_duration_actual = intro_duration if intro_duration > 0 else 0
+            outro_clip = None
             
-            print(f"  🔍 Creating intro: brand_name='{brand_name}', intro_duration={intro_duration}, intro_duration_actual={intro_duration_actual}")
-            
-            # Force intro creation if brand_name is provided (even if intro_duration was adjusted)
-            if brand_name:
+            # Skip old intro/outro creation code - they're already in enhanced_scenes
+            if False:  # Disabled - intro/outro are now part of enhanced_scenes
+                # Create black intro screen with brand name (2 seconds)
+                # ALWAYS create intro if brand_name is provided and intro_duration > 0
+                intro_duration_actual = intro_duration if intro_duration > 0 else 0
+                
+                print(f"  🔍 Creating intro: brand_name='{brand_name}', intro_duration={intro_duration}, intro_duration_actual={intro_duration_actual}")
+                
+                # Force intro creation if brand_name is provided (even if intro_duration was adjusted)
+                if brand_name:
                 if intro_duration_actual <= 0:
                     # Restore intro duration if it was set to 0
                     intro_duration_actual = 2.0
