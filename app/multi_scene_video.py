@@ -1045,7 +1045,9 @@ def create_multi_scene_video(
                         
                         # Create slogan text image (wrapped text)
                         max_width = final_video.w - 100
-                        text_img = Image.new('RGBA', (final_video.w, final_video.h), (0, 0, 0, 0))
+                        # Create slogan text image with black background (not transparent)
+                        # This ensures the text is visible
+                        text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))  # Black background
                         draw = ImageDraw.Draw(text_img)
                         
                         # Try to use a system font
