@@ -777,8 +777,9 @@ def create_multi_scene_video(
                     text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))
                     draw = ImageDraw.Draw(text_img)
                     
-                    # Draw white rectangle
-                    draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
+                    # Draw white rectangle - make it MUCH bigger to fit large text
+                    # Use most of the screen (leave small margins)
+                    draw.rectangle([(50, 200), (1030, 880)], fill=(255, 255, 255), outline=(255, 0, 0), width=15)
                     
                     # Draw text - make it MUCH larger
                     try:
@@ -889,8 +890,9 @@ def create_multi_scene_video(
                     text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))
                     draw = ImageDraw.Draw(text_img)
                     
-                    # Draw white rectangle
-                    draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
+                    # Draw white rectangle - make it MUCH bigger to fit large text
+                    # Use most of the screen (leave small margins)
+                    draw.rectangle([(50, 200), (1030, 880)], fill=(255, 255, 255), outline=(255, 0, 0), width=15)
                     
                     # Draw text (wrapped) - make it MUCH larger
                     try:
