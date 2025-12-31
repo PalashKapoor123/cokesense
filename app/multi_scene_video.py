@@ -35,7 +35,7 @@ def create_multi_scene_video(
         try:
             from moviepy import (
                 ImageClip, AudioFileClip, CompositeVideoClip, VideoFileClip,
-                concatenate_videoclips, concatenate_audioclips, TextClip
+                concatenate_videoclips, concatenate_audioclips, TextClip, ColorClip
             )
         except ImportError:
             # Fall back to old import structure (moviepy 1.x)
@@ -59,6 +59,8 @@ def create_multi_scene_video(
                     return clips[0]  # Will handle looping manually
     except ImportError as e:
         raise ImportError(f"moviepy not installed. Install with: pip install moviepy. Error: {e}")
+    
+    # ColorClip should already be imported above for fallback scenes
     
     try:
         # Save audio temporarily
@@ -485,10 +487,34 @@ def create_multi_scene_video(
             # Final safety check: if we still have no scenes, create at least one placeholder
             if not scene_clips:
                 print(f"  ❌ CRITICAL: No scenes created at all! Creating emergency placeholder scenes...")
-                try:
-                    for emergency_idx in range(num_scenes):
+                print(f"  📋 Attempting to create {num_scenes} emergency placeholder scenes...")
+                emergency_success_count = 0
+                
+                for emergency_idx in range(num_scenes):
+                    scene_created = False
+                    # Method 1: Try ColorClip first (simplest, no PIL needed)
+                    if not scene_created:
                         try:
-                            # Try PIL + ImageClip method first
+                            print(f"     Method 1: Trying ColorClip for scene {emergency_idx + 1}...")
+                            placeholder_clip = ColorClip(
+                                size=(1080, 1080),
+                                color=(0, 0, 0),  # Black
+                                duration=scene_duration
+                            )
+                            placeholder_clip = placeholder_clip.with_fps(30)
+                            scene_clips.append(placeholder_clip)
+                            emergency_success_count += 1
+                            scene_created = True
+                            print(f"     ✅ Created emergency placeholder scene {emergency_idx + 1} (ColorClip method)")
+                        except Exception as colorclip_error:
+                            print(f"     ❌ ColorClip method failed: {colorclip_error}")
+                            import traceback
+                            traceback.print_exc()
+                    
+                    # Method 2: Try PIL + ImageClip
+                    if not scene_created:
+                        try:
+                            print(f"     Method 2: Trying PIL + ImageClip for scene {emergency_idx + 1}...")
                             placeholder = PILImage.new('RGB', (1080, 1080), color='black')
                             with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
                                 placeholder.save(img_file.name)
@@ -499,39 +525,27 @@ def create_multi_scene_video(
                             placeholder_clip = placeholder_clip.resized((1080, 1080))
                             placeholder_clip = placeholder_clip.with_fps(30)
                             scene_clips.append(placeholder_clip)
+                            emergency_success_count += 1
+                            scene_created = True
                             print(f"     ✅ Created emergency placeholder scene {emergency_idx + 1} (PIL method)")
                         except Exception as pil_error:
-                            print(f"     ⚠️ PIL method failed, trying ColorClip fallback: {pil_error}")
-                            try:
-                                # Fallback: Use ColorClip directly (no PIL needed)
-                                try:
-                                    from moviepy import ColorClip
-                                except ImportError:
-                                    from moviepy.editor import ColorClip
-                                
-                                # Create a black screen using ColorClip
-                                placeholder_clip = ColorClip(
-                                    size=(1080, 1080),
-                                    color=(0, 0, 0),  # Black
-                                    duration=scene_duration
-                                )
-                                placeholder_clip = placeholder_clip.with_fps(30)
-                                scene_clips.append(placeholder_clip)
-                                print(f"     ✅ Created emergency placeholder scene {emergency_idx + 1} (ColorClip method)")
-                            except Exception as colorclip_error:
-                                print(f"     ❌ FATAL: Both PIL and ColorClip methods failed: {colorclip_error}")
-                                import traceback
-                                traceback.print_exc()
-                                # Don't raise here - continue to try next scene
-                                continue
-                except Exception as emergency_error:
-                    print(f"     ❌ FATAL: Emergency placeholder creation loop failed: {emergency_error}")
-                    import traceback
-                    traceback.print_exc()
+                            print(f"     ❌ PIL method failed: {pil_error}")
+                            import traceback
+                            traceback.print_exc()
                     
+                    if not scene_created:
+                        print(f"     ❌ FATAL: Could not create scene {emergency_idx + 1} with any method!")
+                
+                print(f"  📊 Emergency creation results: {emergency_success_count}/{num_scenes} scenes created")
+                
                 # Final check: if we still have no scenes, this is truly fatal
                 if not scene_clips:
-                    raise Exception(f"No scenes could be created. All attempts failed (PIL, ImageClip, ColorClip).")
+                    error_msg = f"No scenes could be created. All attempts failed.\n"
+                    error_msg += f"  - Requested scenes: {num_scenes}\n"
+                    error_msg += f"  - Created scenes: {len(scene_clips)}\n"
+                    error_msg += f"  - Emergency creation attempted: {num_scenes} scenes\n"
+                    error_msg += f"  - Emergency creation succeeded: {emergency_success_count} scenes"
+                    raise Exception(error_msg)
             
             if not scene_clips:
                 raise Exception("No scenes could be created after all fallback attempts")
