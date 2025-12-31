@@ -780,16 +780,47 @@ def create_multi_scene_video(
                     # Draw white rectangle
                     draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
                     
-                    # Draw text
+                    # Draw text - make it MUCH larger
                     try:
-                        font = ImageFont.load_default()
+                        font = None
+                        font_size = 200  # Start with very large font
+                        
+                        # Try to load a larger font
+                        font_paths = [
+                            "/System/Library/Fonts/Helvetica.ttc",
+                            "/System/Library/Fonts/Arial.ttf",
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                        ]
+                        
+                        for font_path in font_paths:
+                            try:
+                                if os.path.exists(font_path):
+                                    font = ImageFont.truetype(font_path, font_size)
+                                    break
+                            except:
+                                continue
+                        
+                        # If no font loaded, use default but scale it up by drawing larger
+                        if font is None:
+                            font = ImageFont.load_default()
+                            # Scale up by drawing text multiple times at different sizes
+                            # This makes it appear much larger
+                            for scale in range(1, 10):
+                                offset = scale * 2
+                                for dx in range(-offset, offset+1, 2):
+                                    for dy in range(-offset, offset+1, 2):
+                                        draw.text((540 + dx, 540 + dy), brand_name, font=font, fill=(0, 0, 0))
+                        
                         bbox = draw.textbbox((0, 0), brand_name, font=font)
                         x = (1080 - (bbox[2] - bbox[0])) // 2
                         y = (1080 - (bbox[3] - bbox[1])) // 2
-                        for i in range(20):
+                        
+                        # Draw text multiple times to make it thick and bold
+                        for i in range(30):
                             draw.text((x, y), brand_name, font=font, fill=(0, 0, 0))
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"    ⚠️ Could not draw text: {e}")
                     
                     text_img.save(img_path, 'PNG')
                     temp_files.append(img_path)
@@ -861,13 +892,35 @@ def create_multi_scene_video(
                     # Draw white rectangle
                     draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
                     
-                    # Draw text (wrapped)
+                    # Draw text (wrapped) - make it MUCH larger
                     try:
-                        font = ImageFont.load_default()
+                        font = None
+                        font_size = 150  # Large font for slogan
+                        
+                        # Try to load a larger font
+                        font_paths = [
+                            "/System/Library/Fonts/Helvetica.ttc",
+                            "/System/Library/Fonts/Arial.ttf",
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                        ]
+                        
+                        for font_path in font_paths:
+                            try:
+                                if os.path.exists(font_path):
+                                    font = ImageFont.truetype(font_path, font_size)
+                                    break
+                            except:
+                                continue
+                        
+                        # If no font loaded, use default
+                        if font is None:
+                            font = ImageFont.load_default()
+                        
                         words = slogan.split()
                         lines = []
                         current_line = []
-                        max_width = 880
+                        max_width = 900  # Wider for larger text
                         
                         for word in words:
                             word_width = draw.textbbox((0, 0), word, font=font)[2]
@@ -880,17 +933,18 @@ def create_multi_scene_video(
                             lines.append(' '.join(current_line))
                         
                         text_height = draw.textbbox((0, 0), "Test", font=font)[3] - draw.textbbox((0, 0), "Test", font=font)[1]
-                        y_start = (1080 - len(lines) * (text_height + 20)) // 2
+                        y_start = (1080 - len(lines) * (text_height + 30)) // 2
                         y = y_start
                         
                         for line in lines:
                             bbox = draw.textbbox((0, 0), line, font=font)
                             x = (1080 - (bbox[2] - bbox[0])) // 2
-                            for i in range(20):
+                            # Draw text multiple times to make it thick and bold
+                            for i in range(30):
                                 draw.text((x, y), line, font=font, fill=(0, 0, 0))
-                            y += text_height + 20
-                    except:
-                        pass
+                            y += text_height + 30
+                    except Exception as e:
+                        print(f"    ⚠️ Could not draw text: {e}")
                     
                     text_img.save(img_path, 'PNG')
                     temp_files.append(img_path)
