@@ -176,8 +176,17 @@ def create_multi_scene_video(
             basic_fallback_clip = None
             try:
                 print(f"  🛡️ Creating basic fallback clip as safety net...")
-                basic_fallback_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
-                basic_fallback_clip = basic_fallback_clip.with_fps(30)
+                # Try different ways to set FPS based on MoviePy version
+                try:
+                    basic_fallback_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration, fps=30)
+                except TypeError:
+                    # FPS not in constructor, try setting it after creation
+                    basic_fallback_clip = ColorClip(size=(1080, 1080), color=(0, 0, 0), duration=scene_duration)
+                    if hasattr(basic_fallback_clip, 'with_fps'):
+                        basic_fallback_clip = basic_fallback_clip.with_fps(30)
+                    elif hasattr(basic_fallback_clip, 'set_fps'):
+                        basic_fallback_clip = basic_fallback_clip.set_fps(30)
+                    # If neither works, use as-is (FPS might be set automatically)
                 print(f"  ✅ Basic fallback clip created successfully")
             except Exception as basic_error:
                 print(f"  ⚠️ Basic fallback clip creation failed: {basic_error}")
