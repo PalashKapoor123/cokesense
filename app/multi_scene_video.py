@@ -906,7 +906,7 @@ def create_multi_scene_video(
                 
                 if intro_duration_actual > 0:
                     try:
-                        from moviepy import ColorClip
+                        from moviepy import ColorClip, CompositeVideoClip
                         from PIL import Image, ImageDraw, ImageFont
                         import numpy as np
                         
@@ -917,184 +917,141 @@ def create_multi_scene_video(
                             duration=intro_duration_actual
                         )
                         
-                        # Create brand name text image with black background (not transparent)
-                        # This ensures the text is visible when composited
-                        text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))  # Black background
-                        draw = ImageDraw.Draw(text_img)
-                        
-                        # Try to use a system font - with better fallbacks
-                        font = None
-                        font_size = 100
-                        try:
-                            # Try various font paths that might work on different systems
-                            font_paths = [
-                                "/System/Library/Fonts/Helvetica.ttc",
-                                "/System/Library/Fonts/Arial.ttf",
-                                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-                            ]
-                            for font_path in font_paths:
-                                try:
-                                    if os.path.exists(font_path):
-                                        font = ImageFont.truetype(font_path, font_size)
-                                        print(f"  ✅ Loaded font: {font_path}")
-                                        break
-                                except:
-                                    continue
-                        except:
-                            pass
-                        
-                        # If no font loaded, use default (might be small but should work)
-                        if font is None:
+                        # Set FPS for black screen
+                        if hasattr(black_screen, 'with_fps'):
                             try:
-                                font = ImageFont.load_default()
-                                print(f"  ⚠️ Using default font (may be small)")
-                                font_size = 20  # Default font is usually small
-                            except:
-                                print(f"  ❌ Could not load any font!")
-                                # Create a simple text representation without font
-                                # This is a last resort
-                        
-                        # Get text size for centering
-                        bbox = draw.textbbox((0, 0), brand_name, font=font)
-                        text_width = bbox[2] - bbox[0]
-                        text_height = bbox[3] - bbox[1]
-                        x = (final_video.w - text_width) // 2
-                        y = (final_video.h - text_height) // 2
-                        
-                        # Draw text with red stroke (outline) - make it thicker for visibility
-                        for adj in range(-6, 7):
-                            for adj2 in range(-6, 7):
-                                if adj != 0 or adj2 != 0:
-                                    draw.text((x + adj, y + adj2), brand_name, font=font, fill=(244, 0, 9))  # Coca-Cola red outline
-                        # Draw main white text - make it bright and visible
-                        draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))  # Bright white text
-                        
-                        # Verify text was drawn by checking pixels
-                        try:
-                            pixel_at_text = text_img.getpixel((x + text_width // 2, y + text_height // 2))
-                            print(f"  🔍 Text verification: Pixel at text center = {pixel_at_text}")
-                            # Check if we have any non-black pixels (text should be white or red)
-                            if pixel_at_text == (0, 0, 0):
-                                print(f"  ⚠️ WARNING: Text center is black - text may not have been drawn!")
-                            else:
-                                print(f"  ✅ Text appears to be drawn (non-black pixel found)")
-                        except Exception as verify_error:
-                            print(f"  ⚠️ Could not verify text: {verify_error}")
-                        
-                        # Skip TextClip - use ImageClip method (same as main scenes which work)
-                        # Save text as image file - use EXACT same method as main scenes
-                        text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
-                        
-                        # Verify text was actually drawn before saving
-                        # Check if image has any non-black pixels (text should be white or red)
-                        has_text = False
-                        try:
-                            # Sample some pixels around where text should be
-                            sample_points = [
-                                (x + text_width // 2, y + text_height // 2),  # Center of text
-                                (x, y),  # Top-left of text
-                                (x + text_width, y + text_height),  # Bottom-right of text
-                            ]
-                            for px, py in sample_points:
-                                if 0 <= px < text_img.width and 0 <= py < text_img.height:
-                                    pixel = text_img.getpixel((px, py))
-                                    if pixel != (0, 0, 0):  # Not black
-                                        has_text = True
-                                        print(f"  ✅ Found non-black pixel at ({px}, {py}): {pixel}")
-                                        break
-                        except Exception as check_error:
-                            print(f"  ⚠️ Could not verify text pixels: {check_error}")
-                            # Assume text is there if we can't check
-                            has_text = True
-                        
-                        if not has_text:
-                            print(f"  ⚠️ WARNING: No text pixels found! Text may not have been drawn.")
-                            print(f"  🔧 Attempting to redraw text with larger size...")
-                            # Try redrawing with larger font
-                            try:
-                                if font is None:
-                                    font = ImageFont.load_default()
-                                # Redraw text
-                                draw.text((x, y), brand_name, font=font, fill=(255, 255, 255))
-                                # Check again
-                                pixel = text_img.getpixel((x + text_width // 2, y + text_height // 2))
-                                if pixel != (0, 0, 0):
-                                    has_text = True
-                                    print(f"  ✅ Text redrawn successfully")
+                                black_screen = black_screen.with_fps(30)
                             except:
                                 pass
                         
-                        # Ensure image is in RGB mode (not RGBA) - same as main scenes
-                        if text_img.mode != 'RGB':
-                            text_img = text_img.convert('RGB')
-                        
-                        text_img.save(text_path, 'PNG')
-                        temp_files.append(text_path)
-                        
-                        print(f"  📝 Saved intro text image to: {text_path}")
-                        print(f"  📊 Image mode: {text_img.mode}, size: {text_img.size}, has_text: {has_text}")
-                        
-                        # Verify file was created and has content
-                        if os.path.exists(text_path):
-                            file_size = os.path.getsize(text_path)
-                            print(f"  ✅ Text image file exists: {file_size} bytes")
-                        else:
-                            print(f"  ❌ Text image file was not created!")
-                        
-                        # Create clip from saved image file - use EXACT same method as main scenes
-                        print(f"  📹 Creating ImageClip from text image file (same method as main scenes)...")
-                        brand_text_clip = ImageClip(text_path, duration=intro_duration_actual)
-                        print(f"  ImageClip created, duration: {brand_text_clip.duration}s")
-                        
-                        # Resize to match video size - use same method as main scenes
-                        target_size = (final_video.w, final_video.h)
-                        print(f"  Resizing to {target_size}...")
-                        if hasattr(brand_text_clip, 'size') and brand_text_clip.size != target_size:
-                            brand_text_clip = resize_clip(brand_text_clip, target_size)
-                            print(f"  Resize complete")
-                        
-                        # Set FPS - same as main scenes
-                        if hasattr(brand_text_clip, 'with_fps'):
-                            brand_text_clip = brand_text_clip.with_fps(30)
-                            print(f"  FPS set to 30")
-                        
-                        # Ensure duration is correct - same as main scenes
-                        if hasattr(brand_text_clip, 'with_duration'):
-                            brand_text_clip = brand_text_clip.with_duration(intro_duration_actual)
-                            print(f"  Duration set to {intro_duration_actual}s")
-                        
-                        print(f"  ✅ Created intro text clip from image file (same method as main scenes)")
-                        
-                        # Since text image already has black background, we can use it directly
-                        # No need to composite - the text image IS the intro screen
+                        # Try TextClip first - composite over black background
+                        intro_clip = None
                         try:
-                            # Ensure clip has correct size and duration
-                            if hasattr(brand_text_clip, 'size') and brand_text_clip.size != (final_video.w, final_video.h):
-                                brand_text_clip = resize_clip(brand_text_clip, (final_video.w, final_video.h))
+                            print(f"  📝 Trying TextClip composited over black background...")
+                            from moviepy import TextClip
                             
-                            # Set duration explicitly
-                            if hasattr(brand_text_clip, 'with_duration'):
-                                brand_text_clip = brand_text_clip.with_duration(intro_duration_actual)
+                            # Create text clip with large, visible text
+                            text_clip = TextClip(
+                                brand_name,
+                                fontsize=120,  # Large font
+                                color='white',
+                                method='caption',  # This ensures text is rendered
+                                size=(final_video.w - 100, None),  # Leave margins
+                                align='center'
+                            )
+                            
+                            # Set duration
+                            if hasattr(text_clip, 'with_duration'):
+                                text_clip = text_clip.with_duration(intro_duration_actual)
+                            
+                            # Center the text
+                            text_clip = text_clip.with_position('center')
                             
                             # Set FPS
-                            if hasattr(brand_text_clip, 'with_fps'):
-                                brand_text_clip = brand_text_clip.with_fps(30)
+                            if hasattr(text_clip, 'with_fps'):
+                                text_clip = text_clip.with_fps(30)
                             
-                            # Use the text clip directly (it already has black background with text)
-                            intro_clip = brand_text_clip
+                            # Composite text over black background
+                            intro_clip = CompositeVideoClip([black_screen, text_clip])
                             
-                            print(f"  ✅ Created intro screen with '{brand_name}' text ({intro_duration_actual}s)")
-                            print(f"  📊 Intro clip size: {intro_clip.size if hasattr(intro_clip, 'size') else 'N/A'}")
-                        except Exception as clip_error:
-                            print(f"  ⚠️ Failed to create intro clip: {clip_error}")
-                            import traceback
-                            traceback.print_exc()
-                            # Fallback: just use black screen
-                            intro_clip = black_screen
+                            # Set FPS on composite
                             if hasattr(intro_clip, 'with_fps'):
                                 intro_clip = intro_clip.with_fps(30)
-                            print(f"  ⚠️ Using black screen only for intro (text clip failed)")
+                            
+                            print(f"  ✅ Created intro using TextClip + CompositeVideoClip")
+                        except Exception as textclip_error:
+                            print(f"  ⚠️ TextClip method failed: {textclip_error}")
+                            import traceback
+                            traceback.print_exc()
+                            
+                            # Fallback: Create text image using PIL (more reliable)
+                            print(f"  🔧 Falling back to PIL image method...")
+                            try:
+                                # Create text image with VERY large text
+                                text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))
+                                draw = ImageDraw.Draw(text_img)
+                                
+                                # Use default font but make it HUGE
+                                try:
+                                    font = ImageFont.load_default()
+                                    # Scale up default font by drawing multiple times
+                                    print(f"  📝 Using default font with large size")
+                                except:
+                                    font = None
+                                    print(f"  ⚠️ No font available, using basic text")
+                                
+                                # Draw text - make it MASSIVE and visible
+                                text_to_draw = brand_name
+                                
+                                # If we have a font, use it
+                                if font:
+                                    # Get text size
+                                    bbox = draw.textbbox((0, 0), text_to_draw, font=font)
+                                    text_width = bbox[2] - bbox[0]
+                                    text_height = bbox[3] - bbox[1]
+                                    
+                                    # Scale up by drawing multiple times (makes it thicker/larger)
+                                    x = (final_video.w - text_width) // 2
+                                    y = (final_video.h - text_height) // 2
+                                    
+                                    # Draw thick white text (draw multiple times for thickness)
+                                    for offset in range(-10, 11, 2):
+                                        for offset2 in range(-10, 11, 2):
+                                            draw.text((x + offset, y + offset2), text_to_draw, font=font, fill=(255, 255, 255))
+                                    
+                                    # Draw main text
+                                    draw.text((x, y), text_to_draw, font=font, fill=(255, 255, 255))
+                                else:
+                                    # No font - draw simple text using basic shapes
+                                    # Draw large white rectangle as text placeholder
+                                    center_x = final_video.w // 2
+                                    center_y = final_video.h // 2
+                                    # Draw a large white box as fallback
+                                    draw.rectangle(
+                                        [(center_x - 200, center_y - 50), (center_x + 200, center_y + 50)],
+                                        fill=(255, 255, 255)
+                                    )
+                                    print(f"  ⚠️ Drew fallback white rectangle (no font available)")
+                                
+                                # Save image
+                                text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
+                                if text_img.mode != 'RGB':
+                                    text_img = text_img.convert('RGB')
+                                text_img.save(text_path, 'PNG')
+                                temp_files.append(text_path)
+                                
+                                print(f"  📝 Saved text image to: {text_path}")
+                                
+                                # Create ImageClip from saved image
+                                intro_clip = ImageClip(text_path, duration=intro_duration_actual)
+                                
+                                # Resize
+                                target_size = (final_video.w, final_video.h)
+                                if hasattr(intro_clip, 'size') and intro_clip.size != target_size:
+                                    intro_clip = resize_clip(intro_clip, target_size)
+                                
+                                # Set FPS
+                                if hasattr(intro_clip, 'with_fps'):
+                                    intro_clip = intro_clip.with_fps(30)
+                                
+                                # Set duration
+                                if hasattr(intro_clip, 'with_duration'):
+                                    intro_clip = intro_clip.with_duration(intro_duration_actual)
+                                
+                                print(f"  ✅ Created intro using PIL image fallback")
+                            except Exception as pil_error:
+                                print(f"  ❌ PIL fallback also failed: {pil_error}")
+                                import traceback
+                                traceback.print_exc()
+                                # Last resort: just black screen
+                                intro_clip = black_screen
+                        
+                        # Final check
+                        if intro_clip is None:
+                            print(f"  ⚠️ All methods failed, using black screen only")
+                            intro_clip = black_screen
+                        
+                        print(f"  ✅ Intro clip created: {intro_clip.duration}s, size: {intro_clip.size if hasattr(intro_clip, 'size') else 'N/A'}")
                     except Exception as e:
                         print(f"  ⚠️ Could not create intro screen: {e}")
                         import traceback
