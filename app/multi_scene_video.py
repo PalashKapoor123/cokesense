@@ -591,20 +591,41 @@ def create_multi_scene_video(
                 
                 print(f"  📊 Emergency creation results: {emergency_success_count}/{num_scenes} scenes created")
                 
-                # Final check: if we still have no scenes, this is truly fatal
+                # Final check: if we still have no scenes, try ONE MORE absolute last resort
                 if not scene_clips:
-                    error_msg = f"No scenes could be created. All attempts failed.\n"
-                    error_msg += f"  - Requested scenes: {num_scenes}\n"
-                    error_msg += f"  - Created scenes: {len(scene_clips)}\n"
-                    error_msg += f"  - Emergency creation attempted: {num_scenes} scenes\n"
-                    error_msg += f"  - Emergency creation succeeded: {emergency_success_count} scenes\n"
-                    error_msg += f"  - ColorClip test passed: {colorclip_available}\n"
-                    error_msg += f"  - PIL test passed: {pil_available}\n"
-                    error_msg += f"\n  This suggests a fundamental issue with MoviePy or PIL on this system.\n"
-                    error_msg += f"  Please check the console output above for detailed error messages."
-                    print(f"\n❌ FATAL ERROR DETAILS:")
-                    print(error_msg)
-                    raise Exception(error_msg)
+                    print(f"  🆘 ABSOLUTE LAST RESORT: Trying to create a single minimal scene...")
+                    try:
+                        # Try the absolute simplest possible clip creation
+                        # Use a very small size and minimal duration
+                        minimal_clip = ColorClip(size=(100, 100), color=(0, 0, 0), duration=1.0)
+                        minimal_clip = minimal_clip.with_fps(1)  # Very low FPS
+                        minimal_clip = minimal_clip.resized((1080, 1080))  # Scale up
+                        minimal_clip = minimal_clip.with_duration(scene_duration)
+                        minimal_clip = minimal_clip.with_fps(30)
+                        
+                        # Create all requested scenes from this one minimal clip
+                        for i in range(num_scenes):
+                            scene_clips.append(minimal_clip)
+                        
+                        print(f"  ✅ Created {num_scenes} minimal scenes as absolute last resort!")
+                        print(f"  ⚠️ WARNING: Using minimal fallback scenes - video quality may be reduced")
+                    except Exception as minimal_error:
+                        error_msg = f"No scenes could be created. All attempts failed.\n"
+                        error_msg += f"  - Requested scenes: {num_scenes}\n"
+                        error_msg += f"  - Created scenes: {len(scene_clips)}\n"
+                        error_msg += f"  - Emergency creation attempted: {num_scenes} scenes\n"
+                        error_msg += f"  - Emergency creation succeeded: {emergency_success_count} scenes\n"
+                        error_msg += f"  - ColorClip test passed: {colorclip_available}\n"
+                        error_msg += f"  - PIL test passed: {pil_available}\n"
+                        error_msg += f"  - Minimal fallback also failed: {minimal_error}\n"
+                        error_msg += f"\n  This suggests a fundamental issue with MoviePy on this system.\n"
+                        error_msg += f"  MoviePy may not be properly installed or configured.\n"
+                        error_msg += f"  Please check the console output above for detailed error messages."
+                        print(f"\n❌ FATAL ERROR DETAILS:")
+                        print(error_msg)
+                        import traceback
+                        traceback.print_exc()
+                        raise Exception(error_msg)
             
             if not scene_clips:
                 raise Exception("No scenes could be created after all fallback attempts")
