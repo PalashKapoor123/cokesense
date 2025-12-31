@@ -945,23 +945,36 @@ def create_multi_scene_video(
                         # Draw main white text
                         draw.text((x, y), brand_name, font=font, fill=(255, 255, 255, 255))
                         
-                        # Convert to numpy array and create clip
-                        text_array = np.array(text_img)
+                        # Save text as image file first (more reliable than numpy array)
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as text_file:
+                            text_img.save(text_file.name)
+                            text_path = text_file.name
+                            temp_files.append(text_path)
+                        
+                        print(f"  📝 Saved intro text image to: {text_path}")
+                        
+                        # Try to create clip from saved image file
                         try:
-                            brand_text_clip = ImageClip(text_array).with_duration(intro_duration_actual)
+                            brand_text_clip = ImageClip(text_path, duration=intro_duration_actual)
+                            # Resize if needed
+                            if hasattr(brand_text_clip, 'size') and brand_text_clip.size != (final_video.w, final_video.h):
+                                brand_text_clip = resize_clip(brand_text_clip, (final_video.w, final_video.h))
                             # Set FPS if needed
                             if hasattr(brand_text_clip, 'with_fps'):
                                 brand_text_clip = brand_text_clip.with_fps(30)
+                            print(f"  ✅ Created intro text clip from image file")
                         except Exception as imageclip_error:
-                            print(f"  ⚠️ ImageClip failed for intro text, trying alternative: {imageclip_error}")
-                            # Save text as image file and use that
-                            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as text_file:
-                                text_img.save(text_file.name)
-                                text_path = text_file.name
-                                temp_files.append(text_path)
-                            brand_text_clip = ImageClip(text_path, duration=intro_duration_actual)
-                            if hasattr(brand_text_clip, 'with_fps'):
-                                brand_text_clip = brand_text_clip.with_fps(30)
+                            print(f"  ⚠️ ImageClip from file failed, trying numpy array: {imageclip_error}")
+                            # Fallback: try numpy array
+                            try:
+                                text_array = np.array(text_img)
+                                brand_text_clip = ImageClip(text_array).with_duration(intro_duration_actual)
+                                if hasattr(brand_text_clip, 'with_fps'):
+                                    brand_text_clip = brand_text_clip.with_fps(30)
+                                print(f"  ✅ Created intro text clip from numpy array")
+                            except Exception as numpy_error:
+                                print(f"  ❌ Both methods failed: {numpy_error}")
+                                raise
                         
                         # Composite black screen with text
                         try:
