@@ -777,14 +777,10 @@ def create_multi_scene_video(
                     text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))
                     draw = ImageDraw.Draw(text_img)
                     
-                    # Draw white rectangle - make it MUCH bigger to fit large text
-                    # Use most of the screen (leave small margins)
-                    draw.rectangle([(50, 200), (1030, 880)], fill=(255, 255, 255), outline=(255, 0, 0), width=15)
-                    
-                    # Draw text - make it MUCH larger
+                    # Draw text - make it large but ensure it fits
                     try:
                         font = None
-                        font_size = 200  # Start with very large font
+                        font_size = 180  # Slightly smaller to ensure it fits
                         
                         # Try to load a larger font
                         font_paths = [
@@ -802,20 +798,30 @@ def create_multi_scene_video(
                             except:
                                 continue
                         
-                        # If no font loaded, use default but scale it up by drawing larger
+                        # If no font loaded, use default
                         if font is None:
                             font = ImageFont.load_default()
-                            # Scale up by drawing text multiple times at different sizes
-                            # This makes it appear much larger
-                            for scale in range(1, 10):
-                                offset = scale * 2
-                                for dx in range(-offset, offset+1, 2):
-                                    for dy in range(-offset, offset+1, 2):
-                                        draw.text((540 + dx, 540 + dy), brand_name, font=font, fill=(0, 0, 0))
                         
+                        # Get text dimensions first
                         bbox = draw.textbbox((0, 0), brand_name, font=font)
-                        x = (1080 - (bbox[2] - bbox[0])) // 2
-                        y = (1080 - (bbox[3] - bbox[1])) // 2
+                        text_width = bbox[2] - bbox[0]
+                        text_height = bbox[3] - bbox[1]
+                        
+                        # Calculate rectangle size based on text size (add padding)
+                        padding = 80
+                        rect_width = text_width + (padding * 2)
+                        rect_height = text_height + (padding * 2)
+                        rect_x1 = (1080 - rect_width) // 2
+                        rect_y1 = (1080 - rect_height) // 2
+                        rect_x2 = rect_x1 + rect_width
+                        rect_y2 = rect_y1 + rect_height
+                        
+                        # Draw white rectangle - sized to fit text with padding
+                        draw.rectangle([(rect_x1, rect_y1), (rect_x2, rect_y2)], fill=(255, 255, 255), outline=(255, 0, 0), width=15)
+                        
+                        # Center text in rectangle
+                        x = rect_x1 + padding
+                        y = rect_y1 + padding
                         
                         # Draw text multiple times to make it thick and bold
                         for i in range(30):
