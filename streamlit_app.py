@@ -550,13 +550,39 @@ if st.session_state.get("campaign_generated") and st.session_state.get("last_cam
         dalle_prompt = st.session_state.get("last_dalle_prompt", "")
     
     if image_url:
-        st.image(image_url, width='stretch')
-        st.caption("This image was created based on your selected trend and campaign concept.")
-        # Show which service was used
-        if openai_client:
-            st.caption("✨ Generated with OpenAI DALL·E")
-        else:
-            st.caption("🆓 Generated with Pollinations.ai (Free)")
+        # Debug: Show image URL (helpful for troubleshooting)
+        with st.expander("🔍 Debug: Image URL", expanded=False):
+            st.code(image_url, language=None)
+        
+        try:
+            # Try to display the image directly from URL
+            st.image(image_url, width='stretch')
+            st.caption("This image was created based on your selected trend and campaign concept.")
+            # Show which service was used
+            if openai_client:
+                st.caption("✨ Generated with OpenAI DALL·E")
+            else:
+                st.caption("🆓 Generated with Pollinations.ai (Free)")
+        except Exception as img_error:
+            # If direct URL display fails, try downloading and displaying
+            st.warning("⚠️ Could not display image directly. Trying alternative method...")
+            try:
+                import requests
+                img_response = requests.get(image_url, timeout=30)
+                if img_response.status_code == 200:
+                    st.image(img_response.content, width='stretch')
+                    st.caption("This image was created based on your selected trend and campaign concept.")
+                    if openai_client:
+                        st.caption("✨ Generated with OpenAI DALL·E")
+                    else:
+                        st.caption("🆓 Generated with Pollinations.ai (Free)")
+                else:
+                    st.error(f"⚠️ Could not load image (Status {img_response.status_code}). URL: {image_url[:100]}...")
+                    st.info("💡 The image may still be generating. Please wait a moment and refresh.")
+            except Exception as download_error:
+                st.error(f"⚠️ Could not display image: {download_error}")
+                st.info(f"💡 Image URL: {image_url[:100]}...")
+                st.info("💡 Try refreshing the page or regenerating the campaign.")
     else:
         st.error("⚠️ Could not generate image. Please try again.")
     
