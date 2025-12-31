@@ -1061,11 +1061,18 @@ def create_multi_scene_video(
                             text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))  # Black background, 1080x1080 like main scenes
                             draw = ImageDraw.Draw(text_img)
                             
+                            # TEST: Draw a HUGE white rectangle first to prove the method works
+                            print(f"    Drawing test white rectangle...")
+                            draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
+                            print(f"    ✅ Test rectangle drawn")
+                            
                             # Load font
                             try:
                                 font = ImageFont.load_default()
+                                print(f"    ✅ Loaded default font")
                             except:
                                 font = None
+                                print(f"    ⚠️ No font available")
                             
                             # Simple text wrapping
                             words = slogan.split()
