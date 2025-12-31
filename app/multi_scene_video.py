@@ -795,6 +795,73 @@ def create_multi_scene_video(
                 
                 enhanced_scenes.append(scene_clip)
             
+            # Create outro clip LAST and add it to enhanced_scenes
+            if slogan:
+                try:
+                    from PIL import Image, ImageDraw, ImageFont
+                    import tempfile
+                    
+                    outro_duration = 2.0
+                    print(f"  📝 Creating outro clip as last scene...")
+                    
+                    # Create image file - same as main scenes
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as img_file:
+                        img_path = img_file.name
+                    
+                    # Create simple image with text
+                    text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))
+                    draw = ImageDraw.Draw(text_img)
+                    
+                    # Draw white rectangle
+                    draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
+                    
+                    # Draw text (wrapped)
+                    try:
+                        font = ImageFont.load_default()
+                        words = slogan.split()
+                        lines = []
+                        current_line = []
+                        max_width = 880
+                        
+                        for word in words:
+                            word_width = draw.textbbox((0, 0), word, font=font)[2]
+                            if len(current_line) > 0 and sum(draw.textbbox((0, 0), w, font=font)[2] for w in current_line) + word_width > max_width:
+                                lines.append(' '.join(current_line))
+                                current_line = [word]
+                            else:
+                                current_line.append(word)
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        
+                        text_height = draw.textbbox((0, 0), "Test", font=font)[3] - draw.textbbox((0, 0), "Test", font=font)[1]
+                        y_start = (1080 - len(lines) * (text_height + 20)) // 2
+                        y = y_start
+                        
+                        for line in lines:
+                            bbox = draw.textbbox((0, 0), line, font=font)
+                            x = (1080 - (bbox[2] - bbox[0])) // 2
+                            for i in range(20):
+                                draw.text((x, y), line, font=font, fill=(0, 0, 0))
+                            y += text_height + 20
+                    except:
+                        pass
+                    
+                    text_img.save(img_path, 'PNG')
+                    temp_files.append(img_path)
+                    
+                    # Create ImageClip - same as main scenes
+                    outro_clip = ImageClip(img_path, duration=outro_duration)
+                    outro_clip = resize_clip(outro_clip, (1080, 1080))
+                    if hasattr(outro_clip, 'with_fps'):
+                        outro_clip = outro_clip.with_fps(30)
+                    if hasattr(outro_clip, 'with_duration'):
+                        outro_clip = outro_clip.with_duration(outro_duration)
+                    
+                    enhanced_scenes.append(outro_clip)
+                    print(f"  ✅ Added outro clip as last scene ({outro_duration}s)")
+                except Exception as e:
+                    print(f"  ⚠️ Could not create outro: {e}")
+            
             # Concatenate all scenes
             print(f"🎬 Combining {len(enhanced_scenes)} scenes into final video...")
             print(f"  Total scene clips: {len(enhanced_scenes)} (requested: {num_scenes})")
