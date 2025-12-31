@@ -1082,161 +1082,149 @@ def create_multi_scene_video(
                             except:
                                 pass
                         
-                        # Try TextClip first - composite over black background
+                        # Skip TextClip - use PIL ImageClip method (same as main scenes which work)
+                        print(f"  📝 Creating outro text image using PIL (same method as main scenes)...")
                         outro_clip = None
                         try:
-                            print(f"  📝 Trying TextClip composited over black background for outro...")
-                            from moviepy import TextClip
+                            # Create text image
+                            text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))
+                            draw = ImageDraw.Draw(text_img)
                             
-                            # Create text clip with large, visible text
-                            # For multi-line, use 'caption' method which handles wrapping
-                            text_clip = TextClip(
-                                slogan,
-                                fontsize=80,  # Large font
-                                color='white',
-                                method='caption',  # This ensures text is rendered and wraps
-                                size=(final_video.w - 100, None),  # Leave margins, auto height
-                                align='center'
-                            )
-                            
-                            # Set duration
-                            if hasattr(text_clip, 'with_duration'):
-                                text_clip = text_clip.with_duration(slogan_duration)
-                            
-                            # Center the text
-                            text_clip = text_clip.with_position('center')
-                            
-                            # Set FPS
-                            if hasattr(text_clip, 'with_fps'):
-                                text_clip = text_clip.with_fps(30)
-                            
-                            # Composite text over black background
-                            outro_clip = CompositeVideoClip([black_screen, text_clip])
-                            
-                            # Set FPS on composite
-                            if hasattr(outro_clip, 'with_fps'):
-                                outro_clip = outro_clip.with_fps(30)
-                            
-                            print(f"  ✅ Created outro using TextClip + CompositeVideoClip")
-                        except Exception as textclip_error:
-                            print(f"  ⚠️ TextClip method failed: {textclip_error}")
-                            import traceback
-                            traceback.print_exc()
-                            
-                            # Fallback: Create text image using PIL (more reliable)
-                            print(f"  🔧 Falling back to PIL image method for outro...")
+                            # Try to load default font
+                            font = None
                             try:
-                                # Create text image with VERY large text
-                                text_img = Image.new('RGB', (final_video.w, final_video.h), (0, 0, 0))
-                                draw = ImageDraw.Draw(text_img)
-                                
-                                # Create slogan text image (wrapped text)
-                                max_width = final_video.w - 100
-                                
-                                # Use default font but make it HUGE
-                                try:
-                                    font = ImageFont.load_default()
-                                    print(f"  📝 Using default font with large size")
-                                except:
-                                    font = None
-                                    print(f"  ⚠️ No font available, using basic text")
-                                
-                                # Simple text wrapping
-                                words = slogan.split()
-                                lines = []
-                                current_line = []
-                                current_width = 0
-                                
-                                if font:
-                                    for word in words:
-                                        word_width = draw.textbbox((0, 0), word, font=font)[2]
-                                        if current_width + word_width > max_width and current_line:
-                                            lines.append(' '.join(current_line))
-                                            current_line = [word]
-                                            current_width = word_width
-                                        else:
-                                            current_line.append(word)
-                                            current_width += word_width + draw.textbbox((0, 0), ' ', font=font)[2]
-                                    if current_line:
+                                font = ImageFont.load_default()
+                                print(f"  ✅ Loaded default font")
+                            except:
+                                print(f"  ⚠️ Default font not available")
+                            
+                            # Text wrapping
+                            max_width = final_video.w - 200
+                            words = slogan.split()
+                            lines = []
+                            current_line = []
+                            current_width = 0
+                            
+                            if font:
+                                for word in words:
+                                    word_width = draw.textbbox((0, 0), word, font=font)[2]
+                                    if current_width + word_width > max_width and current_line:
                                         lines.append(' '.join(current_line))
-                                else:
-                                    # No font - just split by words roughly
-                                    words_per_line = len(words) // 3 + 1
-                                    for i in range(0, len(words), words_per_line):
-                                        lines.append(' '.join(words[i:i+words_per_line]))
-                                
-                                # Draw each line centered
-                                if font:
+                                        current_line = [word]
+                                        current_width = word_width
+                                    else:
+                                        current_line.append(word)
+                                        current_width += word_width + draw.textbbox((0, 0), ' ', font=font)[2]
+                                if current_line:
+                                    lines.append(' '.join(current_line))
+                            else:
+                                # No font - split roughly
+                                words_per_line = len(words) // 3 + 1
+                                for i in range(0, len(words), words_per_line):
+                                    lines.append(' '.join(words[i:i+words_per_line]))
+                            
+                            center_x = final_video.w // 2
+                            center_y = final_video.h // 2
+                            
+                            # Draw each line
+                            if font:
+                                try:
                                     text_height = draw.textbbox((0, 0), "Test", font=font)[3] - draw.textbbox((0, 0), "Test", font=font)[1]
-                                    total_text_height = len(lines) * (text_height + 10) - 10
-                                    y_start = (final_video.h - total_text_height) // 2
+                                    total_text_height = len(lines) * (text_height + 20) - 20
+                                    y_start = center_y - total_text_height // 2
                                     y_offset = y_start
                                     
                                     for line in lines:
                                         bbox = draw.textbbox((0, 0), line, font=font)
                                         text_width = bbox[2] - bbox[0]
-                                        x = (final_video.w - text_width) // 2
+                                        x = center_x - text_width // 2
                                         
-                                        # Draw thick white text (draw multiple times for thickness)
-                                        for offset in range(-8, 9, 2):
-                                            for offset2 in range(-8, 9, 2):
-                                                draw.text((x + offset, y_offset + offset2), line, font=font, fill=(255, 255, 255))
+                                        # Draw thick text (multiple times)
+                                        for dx in range(-12, 13, 2):
+                                            for dy in range(-12, 13, 2):
+                                                if dx != 0 or dy != 0:
+                                                    draw.text((x + dx, y_offset + dy), line, font=font, fill=(255, 0, 0))
                                         
-                                        # Draw main text
-                                        draw.text((x, y_offset), line, font=font, fill=(255, 255, 255))
-                                        y_offset += text_height + 10
-                                else:
-                                    # No font - draw simple rectangles as text placeholder
-                                    center_y = final_video.h // 2
-                                    line_height = 60
-                                    for i, line in enumerate(lines):
-                                        y_pos = center_y - (len(lines) * line_height) // 2 + (i * line_height)
-                                        # Draw rectangle for each line
-                                        draw.rectangle(
-                                            [(final_video.w // 2 - 200, y_pos - 25), (final_video.w // 2 + 200, y_pos + 25)],
-                                            fill=(255, 255, 255)
-                                        )
-                                    print(f"  ⚠️ Drew fallback white rectangles (no font available)")
-                                
-                                # Save image
-                                text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
-                                if text_img.mode != 'RGB':
-                                    text_img = text_img.convert('RGB')
-                                text_img.save(text_path, 'PNG')
-                                temp_files.append(text_path)
-                                
-                                print(f"  📝 Saved outro text image to: {text_path}")
-                                
-                                # Create ImageClip from saved image
-                                outro_clip = ImageClip(text_path, duration=slogan_duration)
-                                
-                                # Resize
-                                target_size = (final_video.w, final_video.h)
-                                if hasattr(outro_clip, 'size') and outro_clip.size != target_size:
-                                    outro_clip = resize_clip(outro_clip, target_size)
-                                
-                                # Set FPS
-                                if hasattr(outro_clip, 'with_fps'):
-                                    outro_clip = outro_clip.with_fps(30)
-                                
-                                # Set duration
-                                if hasattr(outro_clip, 'with_duration'):
-                                    outro_clip = outro_clip.with_duration(slogan_duration)
-                                
-                                print(f"  ✅ Created outro using PIL image fallback")
-                            except Exception as pil_error:
-                                print(f"  ❌ PIL fallback also failed: {pil_error}")
-                                import traceback
-                                traceback.print_exc()
-                                # Last resort: just black screen
-                                outro_clip = black_screen
-                        
-                        # Final check
-                        if outro_clip is None:
-                            print(f"  ⚠️ All methods failed, using black screen only")
+                                        # Draw main white text (10 times for thickness)
+                                        for i in range(10):
+                                            draw.text((x, y_offset), line, font=font, fill=(255, 255, 255))
+                                        
+                                        y_offset += text_height + 20
+                                    
+                                    print(f"  ✅ Drew {len(lines)} lines of text")
+                                except Exception as draw_error:
+                                    print(f"  ⚠️ Could not draw text: {draw_error}")
+                                    font = None
+                            
+                            # Fallback: draw rectangles if no font
+                            if not font:
+                                print(f"  🔧 Drawing fallback white rectangles")
+                                line_height = 80
+                                y_start = center_y - (len(lines) * line_height) // 2
+                                for i, line in enumerate(lines):
+                                    y_pos = y_start + (i * line_height)
+                                    box_width = min(600, final_video.w - 200)
+                                    draw.rectangle(
+                                        [(center_x - box_width // 2, y_pos - 40), (center_x + box_width // 2, y_pos + 40)],
+                                        fill=(255, 255, 255),
+                                        outline=(255, 0, 0),
+                                        width=15
+                                    )
+                                print(f"  ✅ Drew {len(lines)} white rectangles")
+                            
+                            # EMERGENCY: Verify center is not black
+                            try:
+                                pixel = text_img.getpixel((center_x, center_y))
+                                print(f"  🔍 Center pixel: {pixel}")
+                                if pixel == (0, 0, 0):
+                                    print(f"  ⚠️ WARNING: Center is black! Drawing emergency white box...")
+                                    draw.rectangle(
+                                        [(50, 50), (final_video.w - 50, final_video.h - 50)],
+                                        fill=(255, 255, 255),
+                                        outline=(255, 0, 0),
+                                        width=30
+                                    )
+                            except:
+                                pass
+                            
+                            # Save image
+                            text_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png').name
+                            text_img.save(text_path, 'PNG')
+                            temp_files.append(text_path)
+                            
+                            if os.path.exists(text_path):
+                                file_size = os.path.getsize(text_path)
+                                print(f"  ✅ Saved outro text image: {text_path} ({file_size} bytes)")
+                            
+                            # Create ImageClip - same method as main scenes
+                            print(f"  📹 Creating ImageClip from saved image (same as main scenes)...")
+                            outro_clip = ImageClip(text_path, duration=slogan_duration)
+                            print(f"  ImageClip created, duration: {outro_clip.duration}s")
+                            
+                            # Resize
+                            target_size = (final_video.w, final_video.h)
+                            if hasattr(outro_clip, 'size') and outro_clip.size != target_size:
+                                outro_clip = resize_clip(outro_clip, target_size)
+                            
+                            # Set FPS
+                            if hasattr(outro_clip, 'with_fps'):
+                                outro_clip = outro_clip.with_fps(30)
+                            
+                            # Set duration
+                            if hasattr(outro_clip, 'with_duration'):
+                                outro_clip = outro_clip.with_duration(slogan_duration)
+                            
+                            print(f"  ✅ Outro clip created successfully")
+                        except Exception as e:
+                            print(f"  ❌ Failed to create outro clip: {e}")
+                            import traceback
+                            traceback.print_exc()
                             outro_clip = black_screen
                         
-                        print(f"  ✅ Outro clip created: {outro_clip.duration}s, size: {outro_clip.size if hasattr(outro_clip, 'size') else 'N/A'}")
+                        if outro_clip is None:
+                            outro_clip = black_screen
+                        
+                        print(f"  ✅ Final outro clip: duration={outro_clip.duration}s")
                     except Exception as e:
                         print(f"  ⚠️ Could not create outro screen: {e}")
                         import traceback
