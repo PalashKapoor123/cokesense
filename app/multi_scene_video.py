@@ -936,30 +936,43 @@ def create_multi_scene_video(
                             text_img = Image.new('RGB', (1080, 1080), (0, 0, 0))  # Black background, 1080x1080 like main scenes
                             draw = ImageDraw.Draw(text_img)
                             
+                            # TEST: Draw a HUGE white rectangle first to prove the method works
+                            print(f"    Drawing test white rectangle...")
+                            draw.rectangle([(100, 400), (980, 680)], fill=(255, 255, 255), outline=(255, 0, 0), width=10)
+                            print(f"    ✅ Test rectangle drawn")
+                            
                             # Load font
                             try:
                                 font = ImageFont.load_default()
+                                print(f"    ✅ Loaded default font")
                             except:
                                 font = None
+                                print(f"    ⚠️ No font available")
                             
-                            # Draw text in center
+                            # Draw text in center (on top of rectangle)
                             text = brand_name
                             if font:
-                                bbox = draw.textbbox((0, 0), text, font=font)
-                                text_width = bbox[2] - bbox[0]
-                                text_height = bbox[3] - bbox[1]
-                                x = (1080 - text_width) // 2
-                                y = (1080 - text_height) // 2
-                                
-                                # Draw white text
-                                draw.text((x, y), text, font=font, fill=(255, 255, 255))
+                                try:
+                                    bbox = draw.textbbox((0, 0), text, font=font)
+                                    text_width = bbox[2] - bbox[0]
+                                    text_height = bbox[3] - bbox[1]
+                                    x = (1080 - text_width) // 2
+                                    y = (1080 - text_height) // 2
+                                    
+                                    # Draw white text MULTIPLE times to make it visible
+                                    for i in range(20):
+                                        draw.text((x, y), text, font=font, fill=(0, 0, 0))  # Black text on white rectangle
+                                    print(f"    ✅ Text drawn at ({x}, {y})")
+                                except Exception as text_error:
+                                    print(f"    ⚠️ Could not draw text: {text_error}")
                             else:
-                                # No font - draw white rectangle
-                                draw.rectangle([(340, 490), (740, 590)], fill=(255, 255, 255))
+                                # No font - rectangle already drawn above
+                                print(f"    ⚠️ No font, using white rectangle only")
                             
                             # Save image
                             text_img.save(img_path, 'PNG')
                             temp_files.append(img_path)
+                            print(f"    ✅ Image saved to {img_path}")
                             
                             # Create ImageClip - EXACT same as main scenes
                             print(f"    Creating ImageClip from saved image...")
