@@ -1090,9 +1090,9 @@ def create_multi_scene_video(
                             for adj in range(-4, 5):
                                 for adj2 in range(-4, 5):
                                     if adj != 0 or adj2 != 0:
-                                        draw.text((x + adj, y_offset + adj2), line, font=font, fill=(200, 16, 46, 255))
+                                        draw.text((x + adj, y_offset + adj2), line, font=font, fill=(200, 16, 46))  # Red outline
                             # Draw main white text
-                            draw.text((x, y_offset), line, font=font, fill=(255, 255, 255, 255))
+                            draw.text((x, y_offset), line, font=font, fill=(255, 255, 255))  # White text
                             y_offset += text_height + 10
                         
                         # Save text as image file first (more reliable than numpy array)
@@ -1126,9 +1126,10 @@ def create_multi_scene_video(
                                 print(f"  ❌ Both methods failed: {numpy_error}")
                                 raise
                         
-                        # Composite black screen with text
+                        # Since text image already has black background, we can use it directly
+                        # No need to composite - the text image IS the outro screen
                         try:
-                            # Ensure both clips have the same size and duration
+                            # Ensure clip has correct size and duration
                             if hasattr(slogan_text_clip, 'size') and slogan_text_clip.size != (final_video.w, final_video.h):
                                 slogan_text_clip = resize_clip(slogan_text_clip, (final_video.w, final_video.h))
                             
@@ -1137,36 +1138,23 @@ def create_multi_scene_video(
                                 slogan_text_clip = slogan_text_clip.with_duration(slogan_duration)
                             
                             # Set FPS
-                            if hasattr(black_screen, 'with_fps'):
-                                black_screen = black_screen.with_fps(30)
                             if hasattr(slogan_text_clip, 'with_fps'):
                                 slogan_text_clip = slogan_text_clip.with_fps(30)
                             
-                            print(f"  📊 Black screen size: {black_screen.size if hasattr(black_screen, 'size') else 'N/A'}")
-                            print(f"  📊 Text clip size: {slogan_text_clip.size if hasattr(slogan_text_clip, 'size') else 'N/A'}")
-                            print(f"  📊 Black screen duration: {black_screen.duration if hasattr(black_screen, 'duration') else 'N/A'}")
-                            print(f"  📊 Text clip duration: {slogan_text_clip.duration if hasattr(slogan_text_clip, 'duration') else 'N/A'}")
+                            # Use the text clip directly (it already has black background with text)
+                            outro_clip = slogan_text_clip
                             
-                            # Composite: text on top of black screen
-                            outro_clip = CompositeVideoClip([black_screen, slogan_text_clip])
-                            
-                            # Set FPS and duration
-                            if hasattr(outro_clip, 'with_fps'):
-                                outro_clip = outro_clip.with_fps(30)
-                            if hasattr(outro_clip, 'with_duration'):
-                                outro_clip = outro_clip.with_duration(slogan_duration)
-                            
-                            print(f"  ✅ Created black outro screen with slogan: '{slogan}' ({slogan_duration}s)")
-                            print(f"  📊 Final outro clip size: {outro_clip.size if hasattr(outro_clip, 'size') else 'N/A'}")
-                        except Exception as composite_error:
-                            print(f"  ⚠️ CompositeVideoClip failed: {composite_error}")
+                            print(f"  ✅ Created outro screen with slogan text ({slogan_duration}s)")
+                            print(f"  📊 Outro clip size: {outro_clip.size if hasattr(outro_clip, 'size') else 'N/A'}")
+                        except Exception as clip_error:
+                            print(f"  ⚠️ Failed to create outro clip: {clip_error}")
                             import traceback
                             traceback.print_exc()
                             # Fallback: just use black screen
                             outro_clip = black_screen
                             if hasattr(outro_clip, 'with_fps'):
                                 outro_clip = outro_clip.with_fps(30)
-                            print(f"  ⚠️ Using black screen only for outro (text overlay failed)")
+                            print(f"  ⚠️ Using black screen only for outro (text clip failed)")
                     except Exception as e:
                         print(f"  ⚠️ Could not create outro screen: {e}")
                         import traceback
