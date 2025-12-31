@@ -9,5 +9,6 @@ pillow
 reportlab
 gtts
 moviepy
+imageio-ffmpeg
 watchdog
 
