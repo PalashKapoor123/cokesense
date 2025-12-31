@@ -185,6 +185,10 @@ st.markdown("""
         border: 1px solid #3A3A3A;
     }
     
+    .stTextInput label {
+        color: #FFFFFF !important;
+    }
+    
     /* Selectbox Styling */
     .stSelectbox > div > div {
         background-color: #2A2A2A;
