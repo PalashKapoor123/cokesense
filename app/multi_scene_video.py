@@ -24,7 +24,8 @@ def create_multi_scene_video(
     scene_duration: float = 3.0,
     transition_duration: float = 0.5,
     slogan: str = None,
-    brand_name: str = "Coca-Cola"
+    brand_name: str = "Coca-Cola",
+    num_scenes: Optional[int] = None
 ) -> str:
     """
     Creates a multi-scene video by combining multiple images/GIFs with audio.
@@ -109,14 +110,33 @@ def create_multi_scene_video(
             print(f"📊 Available resources: {num_available} images/GIFs")
             print(f"📊 Audio duration: {audio_duration:.2f}s")
             
-            # Use ALL available scenes - don't reduce the number
-            num_scenes = num_available
-            print(f"📊 Will create {num_scenes} scenes (using ALL available images/GIFs)")
+            # If num_scenes is explicitly provided, use it (user's request)
+            # Otherwise, use all available images/GIFs
+            if num_scenes is not None:
+                print(f"📊 User requested: {num_scenes} scenes")
+                if num_available < num_scenes:
+                    print(f"  ⚠️ WARNING: Only {num_available} images/GIFs available, but {num_scenes} scenes requested")
+                    print(f"     Will repeat images to create {num_scenes} scenes")
+                    # Extend image_urls or gif_paths to reach num_scenes
+                    if gif_paths:
+                        while len(gif_paths) < num_scenes:
+                            gif_paths.append(gif_paths[len(gif_paths) % num_available])
+                    elif image_urls:
+                        while len(image_urls) < num_scenes:
+                            image_urls.append(image_urls[len(image_urls) % num_available])
+                elif num_available > num_scenes:
+                    print(f"  ℹ️ INFO: {num_available} images/GIFs available, but only {num_scenes} scenes requested")
+                    print(f"     Will use first {num_scenes} images/GIFs")
+                    if gif_paths:
+                        gif_paths = gif_paths[:num_scenes]
+                    elif image_urls:
+                        image_urls = image_urls[:num_scenes]
+            else:
+                # Use ALL available scenes - don't reduce the number
+                num_scenes = num_available
+                print(f"📊 Will create {num_scenes} scenes (using ALL available images/GIFs)")
             
-            # Verify we have enough images for all requested scenes
-            if image_urls and len(image_urls) < num_scenes:
-                print(f"  ⚠️ WARNING: Only {len(image_urls)} images available, but {num_scenes} scenes requested")
-                print(f"     Will use available images and may repeat some scenes")
+            print(f"📊 Final: Will create {num_scenes} scenes")
             
             # Adjust scene duration to ensure all scenes fit exactly within audio duration
             # Account for intro screen (2 seconds) and outro screen (3 seconds)

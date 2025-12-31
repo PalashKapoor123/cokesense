@@ -905,7 +905,8 @@ if st.session_state.get("campaign_generated") and st.session_state.get("last_cam
                             scene_duration=3.0,
                             transition_duration=0.5,
                             slogan=slogan,
-                            brand_name="Coca-Cola"
+                            brand_name="Coca-Cola",
+                            num_scenes=num_scenes
                         )
                         
                         if video_path and os.path.exists(video_path):
